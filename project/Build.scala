@@ -139,7 +139,7 @@ object KafkaBuild extends Build {
       }
   }
 
-  lazy val kafka    = Project(id = "Kafka", base = file(".")).aggregate(core, examples, contrib, perf).settings((commonSettings ++
+  lazy val kafka    = Project(id = "Kafka", base = file(".")).aggregate(core, examples, contrib, clients, perf).settings((commonSettings ++
     runRatTask ++ releaseTask ++ releaseZipTask ++ releaseTarTask): _*)
   lazy val core     = Project(id = "core", base = file("core")).settings(commonSettings: _*)
   lazy val examples = Project(id = "java-examples", base = file("examples")).settings(commonSettings :_*) dependsOn (core)
