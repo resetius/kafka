@@ -9,6 +9,8 @@ install:
 	@set -e;\
 		${sbt} ${sbt_options} update;\
 		${sbt} ${sbt_options} package;\
+		${sbt} ${sbt_options} package-doc;\
+		${sbt} ${sbt_options} package-src;\
 		${sbt} ${sbt_options} assembly-package-dependency;
 	dh_install --list-missing 
 #	dh_installinit -A --no-start --name=statbox-kafka-zookeeper -r -u defaults

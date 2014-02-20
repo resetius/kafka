@@ -1,3 +1,4 @@
 core/target/scala-2.10/*.jar /usr/lib/kafka/core/target/scala-2.10
+clients/target/scala-2.10/*.jar /usr/lib/kafka/clients/target/scala-2.10
 bin/* /usr/lib/kafka/bin
 config/* /usr/lib/kafka/config
