@@ -3,7 +3,7 @@
 .PHONY: binary build clean
 
 sbt=./sbt
-sbt_options=-Dsbt.global.base=project/.sbtboot -Dsbt.boot.directory=project/.boot -Dsbt.ivy.home=project/.ivy ++2.10.2
+sbt_options=-Dsbt.global.base=project/.sbtboot -Dsbt.boot.directory=project/.boot -Dsbt.ivy.home=${HOME}/.ivy2 ++2.10.2
 
 install:
 	@set -e;\
