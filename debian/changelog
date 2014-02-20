@@ -1,3 +1,9 @@
+statbox-kafka (0.8.1-0.2) precise; urgency=low
+
+  * scala version in .sh 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 20 Feb 2014 17:48:17 +0400
+
 statbox-kafka (0.8.1-0.1) precise; urgency=low
 
   * merge with upstream (0.8.1, 11f3975930a72823b20532c8c37732e47f4a2f6b)
