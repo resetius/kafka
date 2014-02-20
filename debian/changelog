@@ -1,0 +1,179 @@
+statbox-kafka (0.8.1-0.1) precise; urgency=low
+
+  * merge with upstream (0.8.1, 11f3975930a72823b20532c8c37732e47f4a2f6b)
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 20 Feb 2014 14:48:17 +0400
+
+statbox-kafka (0.8-0.30) precise; urgency=low
+
+  * incr stop timeout 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 23 Jan 2014 17:57:58 +0400
+
+statbox-kafka (0.8-0.29) precise; urgency=low
+
+  * just rebuild 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 26 Oct 2013 15:54:42 +0400
+
+statbox-kafka (0.8-0.28) precise; urgency=low
+
+  * merge with upstream (0.8.0 release, d4553da609ea9af6db8a79faf116d1623c8a856f)
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 26 Oct 2013 14:53:11 +0400
+
+statbox-kafka (0.8-0.27) precise; urgency=low
+
+  * kafka-delete-topic 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 10 Oct 2013 19:23:48 +0400
+
+statbox-kafka (0.8-0.26) precise; urgency=low
+
+  * scala version 2.10 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 09 Oct 2013 17:37:40 +0400
+
+statbox-kafka (0.8-0.25) precise; urgency=low
+
+  * scala version 2.10.0 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 09 Oct 2013 14:09:50 +0400
+
+statbox-kafka (0.8-0.24) precise; urgency=low
+
+  * merge with upstream (1cb217579bbb1f9d4df24a3d32bf88644697b7fe)
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 08 Oct 2013 20:48:13 +0400
+
+statbox-kafka (0.8-0.23) precise; urgency=low
+
+  * merge with upstream (f89ddced1ba058f0c51697957cde8bb2e2b05c4d) 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 29 Aug 2013 12:11:24 +0400
+
+statbox-kafka (0.8-0.22) precise; urgency=low
+
+  * fix offsetschecker
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 25 Jun 2013 11:48:27 +0400
+
+statbox-kafka (0.8-0.21) precise; urgency=low
+
+  * fix ?
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 24 Jun 2013 18:17:41 +0400
+
+statbox-kafka (0.8-0.20) precise; urgency=low
+
+  * fix startup script 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 24 Jun 2013 17:36:15 +0400
+
+statbox-kafka (0.8-0.19) precise; urgency=low
+
+  * merge with upstream (cc6027b3279ac5cd8908d01d35511c93716fbe60)
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 22 Jun 2013 17:55:51 +0400
+
+statbox-kafka (0.8-0.18) precise; urgency=low
+
+  * rollback 0.8-0.16 patch 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 04 Jun 2013 19:23:40 +0400
+
+statbox-kafka (0.8-0.17) precise; urgency=low
+
+  * merge with upstream (9bd2a11486420a313f800d734cab8a858fac6d0e) 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 04 Jun 2013 16:08:33 +0400
+
+statbox-kafka (0.8-0.16) precise; urgency=low
+
+  * patched producer 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 31 May 2013 13:09:53 +0400
+
+statbox-kafka (0.8-0.15) precise; urgency=low
+
+  * ulimit 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 16 May 2013 20:07:38 +0400
+
+statbox-kafka (0.8-0.14) precise; urgency=low
+
+  * fix startup script 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 14 May 2013 17:44:54 +0400
+
+statbox-kafka (0.8-0.12) precise; urgency=low
+
+  * merge with upstream (988d4d8e65a14390abd748318a64e281e4a37c19)
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sun, 05 May 2013 23:47:59 +0400
+
+statbox-kafka (0.8-0.11) precise; urgency=low
+
+  * merge with upstream (e37a4644209de00f265a5361b31ca63cafc895e9) 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 29 Apr 2013 10:50:28 +0400
+
+statbox-kafka (0.8-0.10) precise; urgency=low
+
+  * fix configs installation
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 24 Apr 2013 17:30:24 +0400
+
+statbox-kafka (0.8-0.9) precise; urgency=low
+
+  * merge with upstream (c5bb1d49942fd94a1ead938567031f9faaeacfbd)
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sun, 21 Apr 2013 15:17:41 +0400
+
+statbox-kafka (0.8-0.8) precise; urgency=low
+
+  * incr stop timeouts 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 17 Apr 2013 14:45:49 +0400
+
+statbox-kafka (0.8-0.7) precise; urgency=low
+
+  * fix run-class.sh 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 16 Apr 2013 21:21:54 +0400
+
+statbox-kafka (0.8-0.6) precise; urgency=low
+
+  * install kafka tools 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 16 Apr 2013 21:14:15 +0400
+
+statbox-kafka (0.8-0.5) precise; urgency=low
+
+  * defaults -> default 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 16 Apr 2013 15:40:17 +0400
+
+statbox-kafka (0.8-0.4) precise; urgency=low
+
+  * remove zookeepeer init 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 16 Apr 2013 10:37:54 +0400
+
+statbox-kafka (0.8-0.3) precise; urgency=low
+
+  * incr java heap memory 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 13 Apr 2013 11:11:12 +0400
+
+statbox-kafka (0.8-0.2) precise; urgency=low
+
+  * fix init scripts
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 12 Apr 2013 22:22:18 +0400
+
+statbox-kafka (0.8-0.1) precise; urgency=low
+
+  * Initial release. 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 12 Apr 2013 13:33:52 +0400

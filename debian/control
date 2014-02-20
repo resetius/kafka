@@ -1,0 +1,10 @@
+Source: statbox-kafka
+Maintainer: Alexey Ozeritsky <aozeritsky@yandex-team.ru>
+Build-Depends: debhelper, openjdk-7-jdk
+
+Package: statbox-kafka
+Architecture: any
+Depends: ${shlibs:Depends}, openjdk-7-jre
+Description: statbox-kafka
+ statbox-kafka
+

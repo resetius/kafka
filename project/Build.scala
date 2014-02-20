@@ -40,12 +40,13 @@ object KafkaBuild extends Build {
     <distribution>repo</distribution>
   </license>
 </licenses>,
-    scalacOptions ++= Seq("-deprecation", "-unchecked", "-g:none"),
+    scalacOptions ++= Seq("-deprecation", "-unchecked", "-g:vars"),
     crossScalaVersions := Seq("2.8.0","2.8.2", "2.9.1", "2.9.2", "2.10.1"),
     excludeFilter in unmanagedSources <<= scalaVersion(v => if (v.startsWith("2.8")) "*_2.9+.scala" else "*_2.8.scala"),
     scalaVersion := "2.8.0",
     version := "0.8.1",
-    publishTo := Some("Apache Maven Repo" at "https://repository.apache.org/service/local/staging/deploy/maven2"),
+//    publishTo := Some("Apache Maven Repo" at "https://repository.apache.org/service/local/staging/deploy/maven2"),
+	publishTo := Some(Resolver.file("resetius.github.com", file(Path.userHome + "/projects/resetius.github.com/repo"))),
     credentials += Credentials(Path.userHome / ".m2" / ".credentials"),
     buildNumber := System.getProperty("build.number", ""),
     version <<= (buildNumber, version)  { (build, version)  => if (build == "") version else version + "+" + build},

@@ -1,0 +1,74 @@
+#! /bin/bash
+
+. /lib/lsb/init-functions
+
+DAEMON="statbox-kafka"
+DAEMON_BASE="statbox"
+DAEMON_BIN="/usr/bin/java"
+DAEMON_NAME="statbox-kafka"
+
+CLASSPATH=""
+for file in /usr/lib/kafka/core/target/scala-2.10/*.jar;
+do
+	CLASSPATH=$CLASSPATH:$file
+done
+KAFKA_OPTS="-Xmx6144M -server  -Dlog4j.configuration=file:/etc/yandex/statbox-kafka/log4j.properties"
+KAFKA_CONF="/etc/yandex/statbox-kafka/server.properties"
+
+export LC_ALL=C
+export LANG=C
+
+if [ -f /etc/default/statbox-kafka ]
+then
+  source /etc/default/statbox-kafka
+fi
+
+DAEMON_OPTS="$KAFKA_OPTS -cp $CLASSPATH kafka.Kafka $KAFKA_CONF"
+
+ulimit -c unlimited
+ulimit -n 655350
+
+case "$1" in
+  start)
+    log_begin_msg "Starting ${DAEMON_NAME}..."
+    test -d /var/run/$DAEMON_BASE || mkdir -p /var/run/$DAEMON_BASE
+    chown statbox:statbox /var/run/statbox -R
+
+    if start-stop-daemon --quiet --stop --signal 0 --pidfile /var/run/$DAEMON_BASE/$DAEMON.pid 2>/dev/null 1>/dev/null; then
+      log_failure_msg "${DAEMON_NAME} already running"
+    else
+      start-stop-daemon -c statbox:statbox --start -bmp /var/run/$DAEMON_BASE/$DAEMON.pid --exec ${DAEMON_BIN} -- ${DAEMON_OPTS}
+      log_end_msg $?
+    fi
+
+    log_end_msg $?
+  ;;
+
+  stop)
+    log_begin_msg "Stopping ${DAEMON_NAME}..."
+    start-stop-daemon --quiet --retry=TERM/1800/KILL/5 --stop --pidfile /var/run/$DAEMON_BASE/$DAEMON.pid 1>/dev/null 2>&1
+   	log_end_msg $?
+    rm -f /var/run/$DAEMON_BASE/$DAEMON.pid 2>/dev/null
+  ;;
+
+  reload)
+    log_begin_msg "Reloading ${DAEMON_NAME}..."
+    start-stop-daemon --quiet --stop --signal 1 --pidfile /var/run/$DAEMON_BASE/$DAEMON.pid
+	log_end_msg $?
+  ;;
+
+  restart)
+    log_begin_msg "Restarting ${DAEMON_NAME}..."
+    $0 stop "$2"
+    sleep 1
+    $0 start
+  ;;
+
+*)
+  log_success_msg "Usage $0 {start|stop|restart}"
+  exit 1
+
+esac
+
+exit 0
+
