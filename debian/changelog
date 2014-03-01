@@ -1,3 +1,9 @@
+statbox-kafka (0.8.1-0.4) precise; urgency=low
+
+  * fix init script 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 01 Mar 2014 17:58:35 +0400
+
 statbox-kafka (0.8.1-0.3) precise; urgency=low
 
   * disable stupid 'stop' and 'restart' in init script

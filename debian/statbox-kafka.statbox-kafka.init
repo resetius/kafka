@@ -62,7 +62,7 @@ case "$1" in
     $0 stop "$2"
     sleep 1
     $0 start
-
+  ;;
   stop)
     if [ -x /usr/bin/kafka-graceful-stop.sh ]
 	then
@@ -71,7 +71,7 @@ case "$1" in
 	else
 		log_begin_msg "/usr/bin/kafka-graceful-stop.sh not found, do nothing"
 	fi
-	;;
+  ;;
   restart)
     if [ -x /usr/bin/kafka-graceful-restart.sh ]
 	then
