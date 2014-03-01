@@ -44,7 +44,7 @@ case "$1" in
     log_end_msg $?
   ;;
 
-  stop)
+  force-stop)
     log_begin_msg "Stopping ${DAEMON_NAME}..."
     start-stop-daemon --quiet --retry=TERM/1800/KILL/5 --stop --pidfile /var/run/$DAEMON_BASE/$DAEMON.pid 1>/dev/null 2>&1
    	log_end_msg $?
@@ -57,15 +57,33 @@ case "$1" in
 	log_end_msg $?
   ;;
 
-  restart)
+  force-restart)
     log_begin_msg "Restarting ${DAEMON_NAME}..."
     $0 stop "$2"
     sleep 1
     $0 start
+
+  stop)
+    if [ -x /usr/bin/kafka-graceful-stop.sh ]
+	then
+		log_begin_msg "Stopping ${DAEMON_NAME} asynchronious..."
+		/usr/bin/kafka-graceful-stop.sh
+	else
+		log_begin_msg "/usr/bin/kafka-graceful-stop.sh not found, do nothing"
+	fi
+	;;
+  restart)
+    if [ -x /usr/bin/kafka-graceful-restart.sh ]
+	then
+		log_begin_msg "Restarting ${DAEMON_NAME} asynchronious..."
+		/usr/bin/kafka-graceful-restart.sh
+	else
+		log_begin_msg "/usr/bin/kafka-graceful-restart.sh not found, do nothing"
+	fi
   ;;
 
 *)
-  log_success_msg "Usage $0 {start|stop|restart}"
+  log_success_msg "Usage $0 {start|stop|restart|force-stop|force-restart}"
   exit 1
 
 esac
