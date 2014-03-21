@@ -161,9 +161,11 @@ class Log(val dir: File,
   
   private def recoverLog() {
     // if we have the clean shutdown marker, skip recovery
-    if(hasCleanShutdownFile) {
+    if (hasCleanShutdownFile) {
       this.recoveryPoint = activeSegment.nextOffset
       return
+    } else {
+      this.recoveryPoint = activeSegment.baseOffset
     }
 
     // okay we need to actually recovery this log
