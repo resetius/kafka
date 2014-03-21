@@ -29,7 +29,7 @@ if [ ! -d $LOG_DIR ]; then
 fi
 
 if [ -z "$SCALA_VERSION" ]; then
-	SCALA_VERSION=2.8.0
+	SCALA_VERSION=2.10
 fi
 
 # TODO: remove when removing sbt
