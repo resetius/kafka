@@ -1,3 +1,9 @@
+statbox-kafka (0.8.1-0.6) precise; urgency=low
+
+  * fix depends 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 27 Mar 2014 18:07:10 +0400
+
 statbox-kafka (0.8.1-0.5) precise; urgency=low
 
   * speedup startup 
