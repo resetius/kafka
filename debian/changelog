@@ -1,3 +1,9 @@
+statbox-kafka (0.8.1-0.8) precise; urgency=low
+
+  * upstream 0ffec142a991849833d9767be07e895428ccaea1 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 04 Apr 2014 14:21:02 +0400
+
 statbox-kafka (0.8.1-0.7) precise; urgency=low
 
   * change arch 
