@@ -3,7 +3,7 @@ Maintainer: Alexey Ozeritsky <aozeritsky@yandex-team.ru>
 Build-Depends: debhelper, java7-jdk
 
 Package: statbox-kafka
-Architecture: any
+Architecture: all
 Depends: ${shlibs:Depends}, java7-runtime
 Description: statbox-kafka
  statbox-kafka
