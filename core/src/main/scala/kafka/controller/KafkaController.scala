@@ -35,9 +35,9 @@ import org.I0Itec.zkclient.{IZkDataListener, IZkStateListener, ZkClient}
 import org.I0Itec.zkclient.exception.{ZkNodeExistsException, ZkNoNodeException}
 import java.util.concurrent.atomic.AtomicInteger
 import org.apache.log4j.Logger
+import java.util.concurrent.locks.ReentrantLock
 import scala.Some
 import kafka.common.TopicAndPartition
-import java.util.concurrent.locks.ReentrantLock
 
 class ControllerContext(val zkClient: ZkClient,
                         val zkSessionTimeout: Int) {
@@ -125,9 +125,11 @@ trait KafkaControllerMBean {
 
 object KafkaController extends Logging {
   val MBeanName = "kafka.controller:type=KafkaController,name=ControllerOps"
-  val stateChangeLogger = "state.change.logger"
+  val stateChangeLogger = new StateChangeLogger("state.change.logger")
   val InitialControllerEpoch = 1
   val InitialControllerEpochZkVersion = 1
+
+  case class StateChangeLogger(override val loggerName: String) extends Logging
 
   def parseControllerId(controllerInfoString: String): Int = {
     try {
@@ -154,7 +156,7 @@ object KafkaController extends Logging {
 class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logging with KafkaMetricsGroup with KafkaControllerMBean {
   this.logIdent = "[Controller " + config.brokerId + "]: "
   private var isRunning = true
-  private val stateChangeLogger = Logger.getLogger(KafkaController.stateChangeLogger)
+  private val stateChangeLogger = KafkaController.stateChangeLogger
   val controllerContext = new ControllerContext(zkClient, config.zkSessionTimeoutMs)
   val partitionStateMachine = new PartitionStateMachine(this)
   val replicaStateMachine = new ReplicaStateMachine(this)
@@ -335,14 +337,21 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
    */
   def onControllerResignation() {
     inLock(controllerContext.controllerLock) {
-      autoRebalanceScheduler.shutdown()
-      deleteTopicManager.shutdown()
       Utils.unregisterMBean(KafkaController.MBeanName)
+
+      if(deleteTopicManager != null)
+        deleteTopicManager.shutdown()
+
       partitionStateMachine.shutdown()
       replicaStateMachine.shutdown()
+
+      if(config.autoLeaderRebalanceEnable)
+        autoRebalanceScheduler.shutdown()
+
       if(controllerContext.controllerChannelManager != null) {
         controllerContext.controllerChannelManager.shutdown()
         controllerContext.controllerChannelManager = null
+        info("Controller shutdown complete")
       }
     }
   }
@@ -602,7 +611,7 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
     }
   }
 
-  def onPreferredReplicaElection(partitions: Set[TopicAndPartition]) {
+  def onPreferredReplicaElection(partitions: Set[TopicAndPartition], isTriggeredByAutoRebalance: Boolean = true) {
     info("Starting preferred replica leader election for partitions %s".format(partitions.mkString(",")))
     try {
       controllerContext.partitionsUndergoingPreferredReplicaElection ++= partitions
@@ -611,7 +620,7 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
     } catch {
       case e: Throwable => error("Error completing preferred replica leader election for partitions %s".format(partitions.mkString(",")), e)
     } finally {
-      removePartitionsFromPreferredReplicaElection(partitions)
+      removePartitionsFromPreferredReplicaElection(partitions, isTriggeredByAutoRebalance)
       deleteTopicManager.resumeDeletionForTopics(partitions.map(_.topic))
     }
   }
@@ -639,15 +648,7 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
   def shutdown() = {
     inLock(controllerContext.controllerLock) {
       isRunning = false
-      partitionStateMachine.shutdown()
-      replicaStateMachine.shutdown()
-      if (config.autoLeaderRebalanceEnable)
-        autoRebalanceScheduler.shutdown()
-      if(controllerContext.controllerChannelManager != null) {
-        controllerContext.controllerChannelManager.shutdown()
-        controllerContext.controllerChannelManager = null
-        info("Controller shutdown complete")
-      }
+      onControllerResignation()
     }
   }
 
@@ -913,7 +914,8 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
     }
   }
 
-  def removePartitionsFromPreferredReplicaElection(partitionsToBeRemoved: Set[TopicAndPartition]) {
+  def removePartitionsFromPreferredReplicaElection(partitionsToBeRemoved: Set[TopicAndPartition],
+                                                   isTriggeredByAutoRebalance : Boolean) {
     for(partition <- partitionsToBeRemoved) {
       // check the status
       val currentLeader = controllerContext.partitionLeadershipInfo(partition).leaderAndIsr.leader
@@ -924,7 +926,8 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
         warn("Partition %s failed to complete preferred replica leader election. Leader is %d".format(partition, currentLeader))
       }
     }
-    ZkUtils.deletePath(zkClient, ZkUtils.PreferredReplicaLeaderElectionPath)
+    if (!isTriggeredByAutoRebalance)
+      ZkUtils.deletePath(zkClient, ZkUtils.PreferredReplicaLeaderElectionPath)
     controllerContext.partitionsUndergoingPreferredReplicaElection --= partitionsToBeRemoved
   }
 
@@ -1089,6 +1092,7 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
             topicsNotInPreferredReplica =
               topicAndPartitionsForBroker.filter {
                 case(topicPartition, replicas) => {
+                  controllerContext.partitionLeadershipInfo.contains(topicPartition) &&
                   controllerContext.partitionLeadershipInfo(topicPartition).leaderAndIsr.leader != leaderBroker
                 }
               }
@@ -1101,26 +1105,19 @@ class KafkaController(val config : KafkaConfig, zkClient: ZkClient) extends Logg
           // check ratio and if greater than desired ratio, trigger a rebalance for the topic partitions
           // that need to be on this broker
           if (imbalanceRatio > (config.leaderImbalancePerBrokerPercentage.toDouble / 100)) {
-            inLock(controllerContext.controllerLock) {
-              // do this check only if the broker is live and there are no partitions being reassigned currently
-              // and preferred replica election is not in progress
-              if (controllerContext.liveBrokerIds.contains(leaderBroker) &&
-                  controllerContext.partitionsBeingReassigned.size == 0 &&
-                  controllerContext.partitionsUndergoingPreferredReplicaElection.size == 0) {
-                val zkPath = ZkUtils.PreferredReplicaLeaderElectionPath
-                val partitionsList = topicsNotInPreferredReplica.keys.map(e => Map("topic" -> e.topic, "partition" -> e.partition))
-                val jsonData = Json.encode(Map("version" -> 1, "partitions" -> partitionsList))
-                try {
-                  ZkUtils.createPersistentPath(zkClient, zkPath, jsonData)
-                  info("Created preferred replica election path with %s".format(jsonData))
-                } catch {
-                  case e2: ZkNodeExistsException =>
-                    val partitionsUndergoingPreferredReplicaElection =
-                      PreferredReplicaLeaderElectionCommand.parsePreferredReplicaElectionData(ZkUtils.readData(zkClient, zkPath)._1)
-                    error("Preferred replica leader election currently in progress for " +
-                          "%s. Aborting operation".format(partitionsUndergoingPreferredReplicaElection));
-                  case e3: Throwable =>
-                    error("Error while trying to auto rebalance topics %s".format(topicsNotInPreferredReplica.keys))
+            topicsNotInPreferredReplica.foreach {
+              case(topicPartition, replicas) => {
+                inLock(controllerContext.controllerLock) {
+                  // do this check only if the broker is live and there are no partitions being reassigned currently
+                  // and preferred replica election is not in progress
+                  if (controllerContext.liveBrokerIds.contains(leaderBroker) &&
+                      controllerContext.partitionsBeingReassigned.size == 0 &&
+                      controllerContext.partitionsUndergoingPreferredReplicaElection.size == 0 &&
+                      !deleteTopicManager.isTopicQueuedUpForDeletion(topicPartition.topic) &&
+                      !deleteTopicManager.isTopicDeletionInProgress(topicPartition.topic) &&
+                      controllerContext.allTopics.contains(topicPartition.topic)) {
+                    onPreferredReplicaElection(Set(topicPartition), false)
+                  }
                 }
               }
             }
