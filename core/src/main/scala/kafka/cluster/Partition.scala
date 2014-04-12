@@ -292,6 +292,12 @@ class Partition(val topic: String,
    */
   private def maybeIncrementLeaderHW(leaderReplica: Replica) {
     val allLogEndOffsets = inSyncReplicas.map(_.logEndOffset)
+    if (allLogEndOffsets.size < 2) {
+      debug("Highwatermark for topic %s partition %d can't be updated, not enough replicas in ISR %s"
+        .format(topic, partitionId, allLogEndOffsets))
+      return
+    }
+
     val newHighWatermark = allLogEndOffsets.min
     val oldHighWatermark = leaderReplica.highWatermark
     if(newHighWatermark > oldHighWatermark) {
