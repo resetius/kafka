@@ -1,3 +1,9 @@
+statbox-kafka (0.8.1-0.10) precise; urgency=low
+
+  * dont increment hw is isr < 2 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sun, 13 Apr 2014 00:31:28 +0400
+
 statbox-kafka (0.8.1-0.9) precise; urgency=low
 
   * revert startup script 
