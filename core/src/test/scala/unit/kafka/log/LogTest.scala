@@ -89,6 +89,28 @@ class LogTest extends JUnitSuite {
     assertEquals("Appending an empty message set should not roll log even if succient time has passed.", numSegments, log.numberOfSegments)
   }
 
+  @Test
+  def testLastSegmentNotDeletedWhenUnflushedMessages() {
+    val set = TestUtils.singleMessageSet("test".getBytes())
+    val log = new Log(logDir, logConfig.copy(segmentMs = 1 * 60 * 60L), recoveryPoint = 0L, scheduler = time.scheduler, time = time)
+
+    log.append(set)
+    assertEquals("Log has one unflushed message", 1, log.unflushedMessages)
+    log.flush()
+
+    assertEquals("Log has zero unflushed message", 0, log.unflushedMessages)
+    log.append(set)
+    assertEquals("Log has one unflushed message", 1, log.unflushedMessages)
+
+    val ct = log.deleteOldSegments(_ => true)
+
+    assertEquals("log segments", 1, log.numberOfSegments)
+    assertEquals("log size", 60, log.size)
+
+    val read = log.read(0, 100, Some(3))
+    assertEquals("expect messages readable", 2, read.size)
+  }
+
   /**
    * Test that appending more than the maximum segment size rolls the log
    */
@@ -526,6 +548,7 @@ class LogTest extends JUnitSuite {
     // append some messages to create some segments
     for(i <- 0 until 100)
       log.append(set)
+    log.flush()
     
     // files should be renamed
     val segments = log.logSegments.toArray
