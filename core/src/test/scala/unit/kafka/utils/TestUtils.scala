@@ -85,6 +85,16 @@ object TestUtils extends Logging {
   }
 
   /**
+   * Create a temporary relative directory
+   */
+  def tempRelativeDir(parent: String): File = {
+    val f = new File(parent, "kafka-" + random.nextInt(1000000))
+    f.mkdirs()
+    f.deleteOnExit()
+    f
+  }
+
+  /**
    * Create a temporary file
    */
   def tempFile(): File = {
@@ -513,7 +523,7 @@ object TestUtils extends Logging {
   def waitUntilMetadataIsPropagated(servers: Seq[KafkaServer], topic: String, partition: Int, timeout: Long) = {
     Assert.assertTrue("Partition [%s,%d] metadata not propagated after timeout".format(topic, partition),
       TestUtils.waitUntilTrue(() =>
-        servers.foldLeft(true)(_ && _.apis.metadataCache.keySet.contains(TopicAndPartition(topic, partition))), timeout))
+        servers.foldLeft(true)(_ && _.apis.metadataCache.containsTopicAndPartition(topic, partition)), timeout))
   }
   
   def writeNonsenseToFile(fileName: File, position: Long, size: Int) {
