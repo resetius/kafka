@@ -1,3 +1,17 @@
+statbox-kafka (0.8.1-0.15) precise; urgency=low
+
+  * KAFKA-1398 Dynamic  config follow-on-comments. 
+  * KAFKA-1398 dynamic config changes are broken. 
+  * KAFKA-1355; Avoid sending all topic metadata on state changes. 
+    Reviewed by Neha Narkhede, Timothy Chen and Guozhang Wang.
+  * KAFKA-1362; Publish sources and javadoc jars; (also removed Scala 2.8.2-specific actions). 
+    Reviewed by Jun Rao and Joe Stein 
+  * KAFKA-1356 (Follow-up) patch to clean up metadata cache api; reviewed by
+    Jun Rao KAFKA-1365; Second Manual preferred replica leader election
+    command always fails; reviewed by Joel Koshy.
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 19 Apr 2014 17:44:58 +0400
+
 statbox-kafka (0.8.1-0.14) precise; urgency=low
 
   * upstream 4bcb22f47e594c127b02d001620fd1f453034b2a
