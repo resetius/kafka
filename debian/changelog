@@ -1,3 +1,9 @@
+statbox-kafka (0.8.1-0.14) precise; urgency=low
+
+  * upstream 4bcb22f47e594c127b02d001620fd1f453034b2a
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 19 Apr 2014 17:43:36 +0400
+
 statbox-kafka (0.8.1-0.12) precise; urgency=low
 
   * patches 
