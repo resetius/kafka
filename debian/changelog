@@ -1,3 +1,13 @@
+statbox-kafka (0.8.1-0.16) precise; urgency=low
+
+  * KAFKA-1327; Log cleaner metrics follow-up patch to reset dirtiest log cleanable
+    ratio; reviewed by Jun Rao 
+  * KAFKA-1356; follow-up - return unknown topic partition on non-existent topic if auto.create is off;
+    reviewed by Timothy Chen, Neha Narkhede and Jun Rao. 
+  * KAFKA-1327 Add log cleaner metrics.
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 22 Apr 2014 22:00:02 +0400
+
 statbox-kafka (0.8.1-0.15) precise; urgency=low
 
   * KAFKA-1398 Dynamic  config follow-on-comments. 
