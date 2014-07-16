@@ -115,12 +115,17 @@ object ReassignPartitionsCommand extends Logging {
       throw new AdminCommandFailedException("Broker list contains duplicate entries: %s".format(duplicateReassignments.mkString(",")))
     val topicsToMoveJsonString = Utils.readFileAsString(topicsToMoveJsonFile)
     val disableRackAware = opts.options.has(opts.disableRackAware)
-    val (proposedAssignments, currentAssignments) = generateAssignment(zkUtils, brokerListToReassign, topicsToMoveJsonString, disableRackAware)
+    val replicasOpt = if (opts.options.has(opts.replicasOpt)) {
+      Some(opts.options.valueOf(opts.replicasOpt).toInt)
+    } else {
+      None
+    }
+    val (proposedAssignments, currentAssignments) = generateAssignment(zkUtils, brokerListToReassign, topicsToMoveJsonString, disableRackAware, replicasOpt)
     println("Current partition replica assignment\n\n%s".format(ZkUtils.formatAsReassignmentJson(currentAssignments)))
     println("Proposed partition reassignment configuration\n\n%s".format(ZkUtils.formatAsReassignmentJson(proposedAssignments)))
   }
 
-  def generateAssignment(zkUtils: ZkUtils, brokerListToReassign: Seq[Int], topicsToMoveJsonString: String, disableRackAware: Boolean): (Map[TopicAndPartition, Seq[Int]], Map[TopicAndPartition, Seq[Int]]) = {
+  def generateAssignment(zkUtils: ZkUtils, brokerListToReassign: Seq[Int], topicsToMoveJsonString: String, disableRackAware: Boolean, replicasOpt: Option[Int] = None): (Map[TopicAndPartition, Seq[Int]], Map[TopicAndPartition, Seq[Int]]) = {
     val topicsToReassign = ZkUtils.parseTopicsData(topicsToMoveJsonString)
     val duplicateTopicsToReassign = CoreUtils.duplicates(topicsToReassign)
     if (duplicateTopicsToReassign.nonEmpty)
@@ -134,7 +139,7 @@ object ReassignPartitionsCommand extends Logging {
     val partitionsToBeReassigned = mutable.Map[TopicAndPartition, Seq[Int]]()
     groupedByTopic.foreach { case (topic, assignment) =>
       val (_, replicas) = assignment.head
-      val assignedReplicas = AdminUtils.assignReplicasToBrokers(brokerMetadatas, assignment.size, replicas.size)
+      val assignedReplicas = AdminUtils.assignReplicasToBrokers(brokerMetadatas, assignment.size, replicasOpt.getOrElse(replicas.size))
       partitionsToBeReassigned ++= assignedReplicas.map { case (partition, replicas) =>
         TopicAndPartition(topic, partition) -> replicas
       }
@@ -299,6 +304,9 @@ object ReassignPartitionsCommand extends Logging {
                       .describedAs("throttle")
                       .defaultsTo("-1")
                       .ofType(classOf[Long])
+
+    val replicasOpt = parser.accepts("replicas").withRequiredArg().ofType(classOf[String])
+
     val options = parser.parse(args : _*)
   }
 }
