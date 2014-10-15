@@ -1,0 +1,30 @@
+statbox-kafka (0.8.2-4) trusty; urgency=medium
+
+  * upstream 0.8.2 branch (5257e9ddebab868beac591279dfbf60183577bf5)
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 16 Oct 2014 00:37:51 +0400
+
+statbox-kafka (0.8.2-3) trusty; urgency=medium
+
+  * logging on dir loading 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sun, 20 Jul 2014 12:43:44 +0400
+
+statbox-kafka (0.8.2-2) trusty; urgency=medium
+
+  * KAFKA-1414
+  * merge upstream
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sun, 20 Jul 2014 12:25:05 +0400
+
+statbox-kafka (0.8.2-1) trusty; urgency=medium
+
+  * can change replication level
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 16 Jul 2014 11:52:09 +0400
+
+statbox-kafka (0.8.2-0) trusty; urgency=medium
+
+  * version cd3ce27d4baf5434676ec040d64663ad3ce09817
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 09 Jul 2014 16:09:50 +0400
