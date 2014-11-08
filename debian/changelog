@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-5) trusty; urgency=medium
+
+  * upstream 80eb04f994963c1c6b5e3f0e8742b81ff140fc65 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sat, 08 Nov 2014 21:19:51 +0300
+
 statbox-kafka (0.8.2-4) trusty; urgency=medium
 
   * upstream 0.8.2 branch (5257e9ddebab868beac591279dfbf60183577bf5)
