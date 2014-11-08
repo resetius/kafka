@@ -34,7 +34,7 @@ ext {
 }
 
 def isVerificationRequired(project) {
-    project.gradle.startParameter.taskNames.contains("uploadArchives")
+    project.gradle.startParameter.taskNames.any { it.contains("upload") }
 }
 
 apply from: file('wrapper.gradle')
@@ -235,6 +235,7 @@ project(':core') {
     compile.exclude module: 'jmxri'
     compile.exclude module: 'jmxtools'
     compile.exclude module: 'mail'
+    compile.exclude module: 'netty'
   }
 
   tasks.create(name: "copyDependantLibs", type: Copy) {
