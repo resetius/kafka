@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-7) trusty; urgency=medium
+
+  * rebuild 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 13 Nov 2014 15:53:15 +0300
+
 statbox-kafka (0.8.2-6) trusty; urgency=medium
 
   * upstream 383ac3e198d6af6f3eb40ab7a42fc73f2f1b4a36
