@@ -59,7 +59,7 @@ case "$1" in
 
   force-restart)
     log_begin_msg "Restarting ${DAEMON_NAME}..."
-    $0 stop "$2"
+    $0 force-stop "$2"
     sleep 1
     $0 start
   ;;
