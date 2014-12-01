@@ -309,7 +309,7 @@ private[kafka] class Processor(val id: Int,
   private val lruConnections = new util.LinkedHashMap[SelectionKey, Long]
   private var nextIdleCloseCheckTime = currentTimeNanos + connectionsMaxIdleNanos
 
-  override def run() {
+  def iteration() {
     startupComplete()
     while(isRunning) {
       // setup any new connections that have been queued up
@@ -364,6 +364,14 @@ private[kafka] class Processor(val id: Int,
     closeAll()
     swallowError(selector.close())
     shutdownComplete()
+  }
+
+  override def run(): Unit = {
+    try {
+      iteration()
+    } catch {
+      case e: Throwable => error("ERROR IN NETWORK THREAD: %s".format(e), e)
+    }
   }
 
   /**
