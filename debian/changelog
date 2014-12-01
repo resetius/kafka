@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-9) trusty; urgency=medium
+
+  * ignore errors in network thread
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 01 Dec 2014 19:13:38 +0300
+
 statbox-kafka (0.8.2-8) trusty; urgency=medium
 
   * rebuild 

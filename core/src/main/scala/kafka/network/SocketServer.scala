@@ -370,7 +370,9 @@ private[kafka] class Processor(val id: Int,
     try {
       iteration()
     } catch {
-      case e: Throwable => error("ERROR IN NETWORK THREAD: %s".format(e), e)
+      case e: Throwable => 
+        error("ERROR IN NETWORK THREAD: %s".format(e), e)
+        sys.exit(1)
     }
   }
 
