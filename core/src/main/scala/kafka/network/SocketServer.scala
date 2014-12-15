@@ -207,7 +207,7 @@ private[kafka] class Acceptor(val host: String,
   /**
    * Accept loop that checks for new connection attempts
    */
-  def run() {
+  def iteration() {
     serverChannel.register(selector, SelectionKey.OP_ACCEPT);
     startupComplete()
     var currentProcessor = 0
@@ -238,6 +238,16 @@ private[kafka] class Acceptor(val host: String,
     swallowError(serverChannel.close())
     swallowError(selector.close())
     shutdownComplete()
+  }
+
+  def run(): Unit = {
+    try {
+      iteration()
+    } catch {
+      case e: Throwable =>
+        error("error in acceptor thread: %s".format(e), e)
+        sys.exit(2)
+    }
   }
   
   /*
