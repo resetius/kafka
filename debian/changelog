@@ -1,3 +1,10 @@
+statbox-kafka (0.8.2-10) trusty; urgency=medium
+
+  * upstream bd212b7a90deaf7f565d620e1aaf9a137f9a0796 
+  * try/catch in acceptor thread
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 15 Dec 2014 12:29:49 +0300
+
 statbox-kafka (0.8.2-9) trusty; urgency=medium
 
   * ignore errors in network thread
