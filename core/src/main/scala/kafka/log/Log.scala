@@ -64,7 +64,7 @@ case class LogAppendInfo(var firstOffset: Long, var lastOffset: Long, sourceCode
  * 
  */
 @threadsafe
-class Log(val dir: File,
+class Log(var dir: File,
           @volatile var config: LogConfig,
           @volatile var recoveryPoint: Long = 0L,
           scheduler: Scheduler,
@@ -554,6 +554,73 @@ class Log(val dir: File,
     numToDelete
   }
 
+  def move(basedir: File): Unit = {
+    val newdir = new File(basedir + "/" + dir.getName)
+
+    val old = new File(dir.getAbsolutePath)
+
+    warn("moving %s -> %s".format(dir.getAbsolutePath, newdir.getAbsoluteFile))
+
+    var moving: Boolean = true
+    var dropOld: Boolean = false
+    val segments = lock synchronized {
+      /* write new data to new disk*/
+
+      if (logEndOffset != logSegments.last.baseOffset) {
+        newdir.mkdirs()
+        val newSegment = roll(newdir)
+        warn("new segment created -> %s".format(newSegment.log.file.getAbsolutePath))
+        dropOld = true
+      } else {
+        moving = false
+      }
+
+      logSegments.toSeq.reverse.tail
+    }
+
+    if (moving) {
+      for (segment <- segments) {
+        val segmentFile = segment.log.file.getName
+        val indexFile   = segment.index.file.getName
+        val segmentDir  = segment.log.file.getParentFile.getAbsolutePath
+        if (segmentDir != newdir.getAbsolutePath) {
+          warn("moving %s -> %s".format(segment.log.file.getAbsolutePath, newdir + "/" + segmentFile))
+
+          val dataFile = new File(newdir + "/" + segmentFile)
+          val data = FileMessageSet.openChannel(dataFile, mutable = true)
+          segment.log.writeTo(data, 0, segment.log.sizeInBytes())
+
+          val index = FileMessageSet.openChannel(new File(newdir + "/" + indexFile), mutable = true)
+          val indexSrc = FileMessageSet.openChannel(segment.index.file, mutable = false)
+          index.transferFrom(indexSrc, 0, segment.index.sizeInBytes())
+
+          data.close()
+          index.close()
+          indexSrc.close()
+
+          dataFile.setLastModified(segment.log.file.lastModified())
+
+          val newSegment = new LogSegment(dir = newdir,
+            startOffset = segment.index.baseOffset,
+            indexIntervalBytes = config.indexInterval,
+            maxIndexSize = config.maxIndexSize,
+            rollJitterMs = config.randomSegmentJitter,
+            time = time)
+
+          val prev = addSegment(newSegment)
+          if (prev != null) {
+            prev.delete()
+          }
+        }
+      }
+    }
+
+    if (dropOld) {
+      warn("drop old dir: %s".format(old.getAbsolutePath))
+      old.delete()
+    }
+  }
+
   /**
    * The size of the log in bytes
    */
@@ -610,9 +677,11 @@ class Log(val dir: File,
    * This will trim the index to the exact size of the number of entries it currently contains.
    * @return The newly rolled segment
    */
-  def roll(): LogSegment = {
+  def roll(newdir: File = dir): LogSegment = {
     val start = time.nanoseconds
     lock synchronized {
+      dir = newdir
+
       val newOffset = logEndOffset
       val logFile = logFilename(dir, newOffset)
       val indexFile = indexFilename(dir, newOffset)
@@ -628,7 +697,7 @@ class Log(val dir: File,
           entry.getValue.log.trim()
         }
       }
-      val segment = new LogSegment(dir, 
+      val segment = new LogSegment(newdir,
                                    startOffset = newOffset,
                                    indexIntervalBytes = config.indexInterval, 
                                    maxIndexSize = config.maxIndexSize,

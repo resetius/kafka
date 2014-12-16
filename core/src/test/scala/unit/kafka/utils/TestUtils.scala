@@ -853,11 +853,13 @@ object TestUtils extends Logging {
   def createLogManager(logDirs: Array[File] = Array.empty[File],
                        defaultConfig: LogConfig = LogConfig(),
                        cleanerConfig: CleanerConfig = CleanerConfig(enableCleaner = false),
+                       balancerConfig: BalancerConfig = BalancerConfig(enable = false, ".*".r, Seq()),
                        time: MockTime = new MockTime()): LogManager = {
     new LogManager(logDirs = logDirs,
                    topicConfigs = Map(),
                    defaultConfig = defaultConfig,
                    cleanerConfig = cleanerConfig,
+                   balancerConfig = balancerConfig,
                    ioThreads = 4,
                    flushCheckMs = 1000L,
                    flushCheckpointMs = 10000L,
