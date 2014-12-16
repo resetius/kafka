@@ -578,6 +578,14 @@ object KafkaConfig {
   val SaslKerberosMinTimeBeforeReloginDoc = SaslConfigs.SASL_KERBEROS_MIN_TIME_BEFORE_RELOGIN_DOC
   val SaslKerberosPrincipalToLocalRulesDoc = SaslConfigs.SASL_KERBEROS_PRINCIPAL_TO_LOCAL_RULES_DOC
 
+  /** *** Disk balancer ***/
+  val DiskBalancerEnableProp = "disk.balancer.enable"
+  val DiskBalancerEnableDoc = ""
+  val DiskBalancerGroupMatchProp = "disk.balancer.group.match"
+  val DiskBalancerGroupMatchDoc = ""
+  val DiskBalancerGroupFieldsProp = "disk.balancer.group.fields"
+  val DiskBalancerGroupFieldsDoc = ""
+
   private val configDef = {
     import ConfigDef.Importance._
     import ConfigDef.Range._
@@ -754,7 +762,10 @@ object KafkaConfig {
       .define(SaslKerberosTicketRenewJitterProp, DOUBLE, Defaults.SaslKerberosTicketRenewJitter, MEDIUM, SaslKerberosTicketRenewJitterDoc)
       .define(SaslKerberosMinTimeBeforeReloginProp, LONG, Defaults.SaslKerberosMinTimeBeforeRelogin, MEDIUM, SaslKerberosMinTimeBeforeReloginDoc)
       .define(SaslKerberosPrincipalToLocalRulesProp, LIST, Defaults.SaslKerberosPrincipalToLocalRules, MEDIUM, SaslKerberosPrincipalToLocalRulesDoc)
-
+      /** *** Disk Balancer ***/
+      .define(DiskBalancerEnableProp, BOOLEAN, false, LOW, DiskBalancerEnableDoc)
+      .define(DiskBalancerGroupMatchProp, STRING, "(.*)", LOW, DiskBalancerGroupMatchDoc)
+      .define(DiskBalancerGroupFieldsProp, STRING, "1", LOW, DiskBalancerGroupFieldsDoc)
   }
 
   def configNames() = {
@@ -1067,4 +1078,8 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
     require(!interBrokerUsesSasl || saslEnabledMechanisms.contains(saslMechanismInterBrokerProtocol),
       s"${KafkaConfig.SaslMechanismInterBrokerProtocolProp} must be included in ${KafkaConfig.SaslEnabledMechanismsProp} when SASL is used for inter-broker communication")
   }
+
+  val diskBalancerEnable = getBoolean(KafkaConfig.DiskBalancerEnableProp)
+  val diskBalancerGroupMatch = getString(KafkaConfig.DiskBalancerGroupMatchProp).r
+  val diskBalancerGroupFields = getString(KafkaConfig.DiskBalancerGroupFieldsProp).split(',').map(_.toInt)
 }

@@ -414,6 +414,7 @@ class LogSegment(val log: FileMessageSet,
    * @throws KafkaStorageException if the delete fails.
    */
   def delete() {
+    this synchronized {
     val deletedLog = log.delete()
     val deletedIndex = index.delete()
     val deletedTimeIndex = timeIndex.delete()
@@ -423,6 +424,7 @@ class LogSegment(val log: FileMessageSet,
       throw new KafkaStorageException("Delete of index " + index.file.getName + " failed.")
     if(!deletedTimeIndex && timeIndex.file.exists)
       throw new KafkaStorageException("Delete of time index " + timeIndex.file.getName + " failed.")
+    }
   }
 
   /**
