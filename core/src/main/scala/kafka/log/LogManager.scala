@@ -132,19 +132,24 @@ class LogManager(val logDirs: Array[File],
         logDir <- dirContent if logDir.isDirectory
       } yield {
         Utils.runnable {
-          debug("Loading log '" + logDir.getName + "'")
+          if (logDir.list().isEmpty) {
+            debug("Removing empty dir '" + logDir.getName + "'")
+            logDir.delete()
+          } else {
+            debug("Loading log '" + logDir.getName + "'")
 
-          val topicPartition = Log.parseTopicPartitionName(logDir.getName)
-          val config = topicConfigs.getOrElse(topicPartition.topic, defaultConfig)
-          val logRecoveryPoint = recoveryPoints.getOrElse(topicPartition, 0L)
+            val topicPartition = Log.parseTopicPartitionName(logDir.getName)
+            val config = topicConfigs.getOrElse(topicPartition.topic, defaultConfig)
+            val logRecoveryPoint = recoveryPoints.getOrElse(topicPartition, 0L)
 
-          val current = new Log(logDir, config, logRecoveryPoint, scheduler, time)
-          val previous = this.logs.put(topicPartition, current)
+            val current = new Log(logDir, config, logRecoveryPoint, scheduler, time)
+            val previous = this.logs.put(topicPartition, current)
 
-          if (previous != null) {
-            throw new IllegalArgumentException(
-              "Duplicate log directories found: %s, %s!".format(
-              current.dir.getAbsolutePath, previous.dir.getAbsolutePath))
+            if (previous != null) {
+              throw new IllegalArgumentException(
+                "Duplicate log directories found: %s, %s!".format(
+                  current.dir.getAbsolutePath, previous.dir.getAbsolutePath))
+            }
           }
         }
       }
@@ -479,5 +484,68 @@ class LogManager(val logDirs: Array[File],
           error("Error flushing topic " + topicAndPartition.topic, e)
       }
     }
+  }
+
+  case class Point(dir: String, logs: java.util.LinkedList[Log]) {
+    val file = new File(dir)
+    def size = logs.size
+    def pop = logs.removeFirst()
+    def add(log: Log) = logs.addLast(log)
+  }
+
+  def balanceGroup(groupName: String, group: Iterable[Log]): Unit = {
+    var groupByDir: Seq[Point] =
+      (logDirs.map(x => (x.getAbsolutePath, Seq.empty[Log])).toMap ++ group.groupBy(_.dir.getParent)).map({
+        case (k, v) =>
+          val list = new java.util.LinkedList[Log]
+          scala.util.Random.shuffle(v).foreach(list.add)
+          Point(k, list)
+      }).toSeq.sortBy(x => -x.logs.size)
+
+    warn("balancing '%s' %d groups: %s".format(groupName, groupByDir.size, groupByDir.map(_.dir)))
+
+    val dif = Math.min(group.size % groupByDir.size, 1)
+    var mod = true
+
+    while (mod) {
+      mod = false
+      val mx = groupByDir.head.size
+      val p  = groupByDir.last
+
+      warn("%d %s %d %s".format(mx, groupByDir.head.dir, p.size, p.dir))
+
+      if (mx - p.size > dif) {
+        val log = groupByDir.head.pop
+
+        log.move(p.file)
+        checkpointRecoveryPointOffsets()
+
+        p.add(log)
+        mod = true
+
+        groupByDir = groupByDir.sortBy(x => -x.logs.size)
+      }
+    }
+
+    warn("balancing group '%s' done".format(groupName))
+  }
+
+  def balance(): Unit = synchronized {
+    warn("start balancing")
+    //TODO: group rule in config
+    var byTopic = allLogs().groupBy(_.topicAndPartition.topic.split("--").last)
+    var other = Seq.empty[Log]
+    var drop  = Set.empty[String]
+    for ((k, v) <- byTopic) {
+      if (v.size <= 1) {
+        drop  += k
+        other ++= v.toSeq
+      }
+    }
+    byTopic --= drop
+
+    byTopic.foreach({case (k, v) => balanceGroup(k, v)})
+    balanceGroup("__other", other)
+    warn("balancing done")
   }
 }

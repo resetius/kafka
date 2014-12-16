@@ -25,7 +25,7 @@ import kafka.utils._
 import java.util.concurrent._
 import atomic.{AtomicInteger, AtomicBoolean}
 import java.io.File
-import org.I0Itec.zkclient.ZkClient
+import org.I0Itec.zkclient.{IZkDataListener, ZkClient}
 import kafka.controller.{ControllerStats, KafkaController}
 import kafka.cluster.Broker
 import kafka.api.{ControlledShutdownResponse, ControlledShutdownRequest}
@@ -57,6 +57,26 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime) extends Logg
   val kafkaScheduler = new KafkaScheduler(config.backgroundThreads)
   var zkClient: ZkClient = null
 
+  private val diskBalancerListener = new IZkDataListener {
+    override def handleDataChange(dataPath: String, data: scala.Any): Unit = {
+      warn("scheduling balancer")
+      kafkaScheduler.schedule("kafka-disk-balancer", () => {
+        try {
+          warn("running balancer")
+          logManager.balance()
+          zkClient.delete(dataPath)
+        } catch {
+          case e: Throwable =>
+            fatal("error on balance: %s".format(e), e)
+            Runtime.getRuntime.halt(1)
+        }
+      }, 0, -1, TimeUnit.SECONDS)
+    }
+
+    override def handleDataDeleted(dataPath: String): Unit = {}
+  }
+  val diskBalancerPath = "/admin/disk-balancer-" + java.net.InetAddress.getLocalHost.getCanonicalHostName
+
   newGauge(
     "BrokerState",
     new Gauge[Int] {
@@ -84,6 +104,12 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime) extends Logg
       /* start log manager */
       logManager = createLogManager(zkClient, brokerState)
       logManager.startup()
+
+      if (zkClient.exists(diskBalancerPath)) {
+        zkClient.delete(diskBalancerPath)
+      }
+      warn("subscribe on '%s'".format(diskBalancerPath))
+      zkClient.subscribeDataChanges(diskBalancerPath, diskBalancerListener)
 
       socketServer = new SocketServer(config.brokerId,
                                       config.hostName,
