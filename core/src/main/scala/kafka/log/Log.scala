@@ -505,7 +505,8 @@ class Log(var dir: File,
 
       if (logEndOffset != logSegments.last.baseOffset) {
         newdir.mkdirs()
-        roll(newdir)
+        val newSegment = roll(newdir)
+        warn("new segment created -> %s".format(newSegment.log.file.getAbsolutePath))
         dropOld = true
       } else {
         moving = false
@@ -514,14 +515,13 @@ class Log(var dir: File,
       logSegments.toSeq.reverse.tail
     }
 
-    while (moving) {
-      moving = false
+    if (moving) {
       for (segment <- segments) {
         val segmentFile = segment.log.file.getName
         val indexFile   = segment.index.file.getName
         val segmentDir  = segment.log.file.getParentFile.getAbsolutePath
         if (segmentDir != newdir.getAbsolutePath) {
-          moving = true
+          warn("moving %s -> %s".format(segment.log.file.getAbsolutePath, newdir + "/" + segmentFile))
 
           val dataFile = Utils.createFile(newdir + "/" + segmentFile)
           val data = Utils.openChannel(dataFile, mutable = true)
