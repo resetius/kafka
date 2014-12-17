@@ -500,7 +500,7 @@ class Log(var dir: File,
 
     var moving: Boolean = true
     var dropOld: Boolean = false
-    lock synchronized {
+    val segments = lock synchronized {
       /* write new data to new disk*/
 
       if (logEndOffset != logSegments.last.baseOffset) {
@@ -510,11 +510,13 @@ class Log(var dir: File,
       } else {
         moving = false
       }
+
+      logSegments.toSeq.reverseIterator
     }
 
     while (moving) {
       moving = false
-      for (segment <- logSegments) {
+      for (segment <- segments) {
         val segmentFile = segment.log.file.getName
         val indexFile   = segment.index.file.getName
         val segmentDir  = segment.log.file.getParentFile.getAbsolutePath
