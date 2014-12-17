@@ -511,7 +511,7 @@ class Log(var dir: File,
         moving = false
       }
 
-      logSegments.toSeq.reverseIterator
+      logSegments.toSeq.reverse.tail
     }
 
     while (moving) {
