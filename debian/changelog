@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-14) trusty; urgency=medium
+
+  * disk balancer (move only new segments, fix) 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 17 Dec 2014 12:59:30 +0300
+
 statbox-kafka (0.8.2-12) trusty; urgency=medium
 
   * disk balancer (move only new segments) 
