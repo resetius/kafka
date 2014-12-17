@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-11) trusty; urgency=medium
+
+  * disk balancer initial 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 17 Dec 2014 00:34:28 +0300
+
 statbox-kafka (0.8.2-10) trusty; urgency=medium
 
   * upstream bd212b7a90deaf7f565d620e1aaf9a137f9a0796 
