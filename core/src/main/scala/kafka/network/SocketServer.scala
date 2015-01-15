@@ -246,7 +246,7 @@ private[kafka] class Acceptor(val host: String,
     } catch {
       case e: Throwable =>
         error("error in acceptor thread: %s".format(e), e)
-        sys.exit(2)
+        Runtime.getRuntime.halt(2)
     }
   }
   
@@ -382,7 +382,7 @@ private[kafka] class Processor(val id: Int,
     } catch {
       case e: Throwable => 
         error("ERROR IN NETWORK THREAD: %s".format(e), e)
-        sys.exit(1)
+        Runtime.getRuntime.halt(1)
     }
   }
 
