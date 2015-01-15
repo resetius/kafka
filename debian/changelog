@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-16) trusty; urgency=medium
+
+  * replace sys.exit(1) with halt
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 16 Jan 2015 01:33:29 +0300
+
 statbox-kafka (0.8.2-15) trusty; urgency=medium
 
   * same
