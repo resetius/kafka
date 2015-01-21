@@ -530,6 +530,7 @@ class ConnectionQuotas(val defaultMax: Int, overrideQuotas: Map[String, Int]) {
   private val counts = mutable.Map[InetAddress, Int]()
   
   def inc(addr: InetAddress) {
+    /*
     counts synchronized {
       val count = counts.getOrElse(addr, 0)
       counts.put(addr, count + 1)
@@ -537,9 +538,11 @@ class ConnectionQuotas(val defaultMax: Int, overrideQuotas: Map[String, Int]) {
       if(count >= max)
         throw new TooManyConnectionsException(addr, max)
     }
+    */
   }
   
   def dec(addr: InetAddress) {
+    /*
     counts synchronized {
       val count = counts.get(addr).get
       if(count == 1)
@@ -547,6 +550,7 @@ class ConnectionQuotas(val defaultMax: Int, overrideQuotas: Map[String, Int]) {
       else
         counts.put(addr, count - 1)
     }
+    */
   }
   
 }
