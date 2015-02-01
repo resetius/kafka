@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-22) trusty; urgency=medium
+
+  * fetchSize: fix exception
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 02 Feb 2015 00:26:21 +0300
+
 statbox-kafka (0.8.2-21) trusty; urgency=medium
 
   * fetchSize: logging and fixes 
