@@ -37,10 +37,11 @@ import com.yammer.metrics.core.Gauge
  *  Abstract class for fetching data from multiple partitions from the same broker.
  */
 abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroker: Broker, socketTimeout: Int, socketBufferSize: Int,
-                                     fetchSize: Int, fetcherBrokerId: Int = -1, maxWait: Int = 0, minBytes: Int = 1,
+                                     minFetchSize: Int, maxFetchSize: Int, fetcherBrokerId: Int = -1, maxWait: Int = 0, minBytes: Int = 1,
                                      isInterruptible: Boolean = true)
   extends ShutdownableThread(name, isInterruptible) {
-  private val partitionMap = new mutable.HashMap[TopicAndPartition, Long] // a (topic, partition) -> offset map
+  case class OffsetAndFetchSize(offset: Long, fetchSize: Int)
+  private val partitionMap = new mutable.HashMap[TopicAndPartition, OffsetAndFetchSize] // a (topic, partition) -> offset map
   private val partitionMapLock = new ReentrantLock
   private val partitionMapCond = partitionMapLock.newCondition()
   val simpleConsumer = new SimpleConsumer(sourceBroker.host, sourceBroker.port, socketTimeout, socketBufferSize, clientId)
@@ -75,7 +76,7 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
       if (partitionMap.isEmpty)
         partitionMapCond.await(200L, TimeUnit.MILLISECONDS)
       partitionMap.foreach {
-        case((topicAndPartition, offset)) =>
+        case((topicAndPartition, OffsetAndFetchSize(offset, fetchSize))) =>
           fetchRequestBuilder.addFetch(topicAndPartition.topic, topicAndPartition.partition,
                            offset, fetchSize)
       }
@@ -119,13 +120,31 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                     val validBytes = messages.validBytes
                     val newOffset = messages.shallowIterator.toSeq.lastOption match {
                       case Some(m: MessageAndOffset) => m.nextOffset
-                      case None => currentOffset.get
+                      case None => currentOffset.get.offset
                     }
-                    partitionMap.put(topicAndPartition, newOffset)
+                    val newFetchSize: Int = if (messages.isEmpty && partitionData.hw > currentOffset.get.offset) {
+                      // incr fetch size
+                      if (currentOffset.get.fetchSize * 2 > maxFetchSize) {
+                        maxFetchSize
+                      } else {
+                        currentOffset.get.fetchSize * 2
+                      }
+                    } else {
+                      if (validBytes < currentOffset.get.fetchSize / 2) {
+                        if (currentOffset.get.fetchSize / 2 > minFetchSize) {
+                          currentOffset.get.fetchSize / 2
+                        } else {
+                          minFetchSize
+                        }
+                      } else {
+                        currentOffset.get.fetchSize
+                      }
+                    }
+                    partitionMap.put(topicAndPartition, OffsetAndFetchSize(newOffset, newFetchSize))
                     fetcherLagStats.getFetcherLagStats(topic, partitionId).lag = partitionData.hw - newOffset
                     fetcherStats.byteRate.mark(validBytes)
                     // Once we hand off the partition data to the subclass, we can't mess with it any more in this thread
-                    processPartitionData(topicAndPartition, currentOffset.get, partitionData)
+                    processPartitionData(topicAndPartition, currentOffset.get.offset, partitionData)
                   } catch {
                     case ime: InvalidMessageException =>
                       // we log the error and continue. This ensures two things
@@ -135,14 +154,14 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                       logger.error("Found invalid messages during fetch for partition [" + topic + "," + partitionId + "] offset " + currentOffset.get + " error " + ime.getMessage)
                     case e: Throwable =>
                       throw new KafkaException("error processing data for partition [%s,%d] offset %d"
-                                               .format(topic, partitionId, currentOffset.get), e)
+                                               .format(topic, partitionId, currentOffset.get.offset), e)
                   }
                 case ErrorMapping.OffsetOutOfRangeCode =>
                   try {
                     val newOffset = handleOffsetOutOfRange(topicAndPartition)
-                    partitionMap.put(topicAndPartition, newOffset)
+                    partitionMap.put(topicAndPartition, OffsetAndFetchSize(newOffset, minFetchSize))
                     error("Current offset %d for partition [%s,%d] out of range; reset offset to %d"
-                      .format(currentOffset.get, topic, partitionId, newOffset))
+                      .format(currentOffset.get.offset, topic, partitionId, newOffset))
                   } catch {
                     case e: Throwable =>
                       error("Error getting offset for partition [%s,%d] to broker %d".format(topic, partitionId, sourceBroker.id), e)
@@ -174,7 +193,10 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
         if (!partitionMap.contains(topicAndPartition))
           partitionMap.put(
             topicAndPartition,
-            if (PartitionTopicInfo.isOffsetInvalid(offset)) handleOffsetOutOfRange(topicAndPartition) else offset)
+            OffsetAndFetchSize(
+              if (PartitionTopicInfo.isOffsetInvalid(offset)) handleOffsetOutOfRange(topicAndPartition) else offset,
+              minFetchSize
+            ))
       }
       partitionMapCond.signalAll()
     } finally {
