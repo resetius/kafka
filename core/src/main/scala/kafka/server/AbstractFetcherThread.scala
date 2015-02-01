@@ -179,7 +179,7 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                   }
               }
             } else {
-              logger.error("smth wrong: %s %d %d".format(currentOffset, fetchRequest.requestInfo(topicAndPartition).offset, currentOffset.get.offset))
+              logger.error("smth wrong: %s %d %d".format(currentOffset, fetchRequest.requestInfo(topicAndPartition).offset, currentOffset.map(_.offset).getOrElse(-1L)))
             }
         }
       }
