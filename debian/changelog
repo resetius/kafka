@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-19) trusty; urgency=medium
+
+  * fix config checks 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sun, 01 Feb 2015 18:35:28 +0300
+
 statbox-kafka (0.8.2-18) trusty; urgency=medium
 
   * heuristic fetchSize 
