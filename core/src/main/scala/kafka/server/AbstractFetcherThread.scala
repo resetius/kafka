@@ -122,7 +122,7 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                       case Some(m: MessageAndOffset) => m.nextOffset
                       case None => currentOffset.get.offset
                     }
-                    val newFetchSize: Int = if (messages.isEmpty && partitionData.hw > currentOffset.get.offset) {
+                    val newFetchSize: Int = if (messages.isEmpty && partitionData.hw > newOffset) {
                       // incr fetch size
                       if (currentOffset.get.fetchSize * 2 > maxFetchSize) {
                         maxFetchSize
@@ -139,6 +139,10 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                       } else {
                         currentOffset.get.fetchSize
                       }
+                    }
+                    if (newFetchSize != currentOffset.get.fetchSize) {
+                      logger.warn("change fetch size for %s: %d -> %d (%s, %d, %d)".format(
+                        topicAndPartition, currentOffset.get.fetchSize, newFetchSize, messages.isEmpty, partitionData.hw, currentOffset.get.offset));
                     }
                     partitionMap.put(topicAndPartition, OffsetAndFetchSize(newOffset, newFetchSize))
                     fetcherLagStats.getFetcherLagStats(topic, partitionId).lag = partitionData.hw - newOffset
@@ -174,6 +178,8 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                     partitionsWithError += topicAndPartition
                   }
               }
+            } else {
+              logger.error("smth wrong: %s %d %d".format(currentOffset, fetchRequest.requestInfo(topicAndPartition).offset, currentOffset.get.offset))
             }
         }
       }
