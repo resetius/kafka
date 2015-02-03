@@ -122,7 +122,7 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                       case Some(m: MessageAndOffset) => m.nextOffset
                       case None => currentOffset.get.offset
                     }
-                    val newFetchSize: Int = if (messages.isEmpty && partitionData.hw > newOffset) {
+                    val newFetchSize: Int = if (validBytes == 0 && (partitionData.hw > newOffset || messages.sizeInBytes > 0)) {
                       // incr fetch size
                       if (currentOffset.get.fetchSize * 2 > maxFetchSize) {
                         maxFetchSize
@@ -141,8 +141,8 @@ abstract class AbstractFetcherThread(name: String, clientId: String, sourceBroke
                       }
                     }
                     if (newFetchSize != currentOffset.get.fetchSize) {
-                      logger.warn("change fetch size for %s: %d -> %d (%s, %d, %d)".format(
-                        topicAndPartition, currentOffset.get.fetchSize, newFetchSize, messages.isEmpty, partitionData.hw, currentOffset.get.offset));
+                      logger.warn("change (%s) fetch size for %s: %d -> %d (%s, %d, %d)".format(
+                        topicAndPartition, currentOffset.get.fetchSize > newFetchSize, currentOffset.get.fetchSize, newFetchSize, messages.isEmpty, partitionData.hw, currentOffset.get.offset));
                     }
                     partitionMap.put(topicAndPartition, OffsetAndFetchSize(newOffset, newFetchSize))
                     fetcherLagStats.getFetcherLagStats(topic, partitionId).lag = partitionData.hw - newOffset

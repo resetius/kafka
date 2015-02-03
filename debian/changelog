@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2-23) trusty; urgency=medium
+
+  * fetchSize: strange incr size condition
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 04 Feb 2015 01:11:06 +0300
+
 statbox-kafka (0.8.2-22) trusty; urgency=medium
 
   * fetchSize: fix exception
