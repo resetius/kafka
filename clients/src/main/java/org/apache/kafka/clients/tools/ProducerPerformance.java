@@ -15,10 +15,7 @@ package org.apache.kafka.clients.tools;
 import java.util.Arrays;
 import java.util.Properties;
 
-import org.apache.kafka.clients.producer.Callback;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.clients.producer.*;
 
 public class ProducerPerformance {
 
@@ -46,12 +43,14 @@ public class ProducerPerformance {
                 throw new IllegalArgumentException("Invalid property: " + args[i]);
             props.put(pieces[0], pieces[1]);
         }
-        KafkaProducer producer = new KafkaProducer(props);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArraySerializer");
+        KafkaProducer<byte[], byte[]> producer = new KafkaProducer<byte[], byte[]>(props);
 
         /* setup perf test */
         byte[] payload = new byte[recordSize];
         Arrays.fill(payload, (byte) 1);
-        ProducerRecord record = new ProducerRecord(topicName, payload);
+        ProducerRecord<byte[], byte[]> record = new ProducerRecord<byte[], byte[]>(topicName, payload);
         long sleepTime = NS_PER_SEC / throughput;
         long sleepDeficitNs = 0;
         Stats stats = new Stats(numRecords, 5000);

@@ -120,7 +120,8 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime) extends Logg
                                       config.socketReceiveBufferBytes,
                                       config.socketRequestMaxBytes,
                                       config.maxConnectionsPerIp,
-                                      config.connectionsMaxIdleMs)
+                                      config.connectionsMaxIdleMs,
+                                      config.maxConnectionsPerIpOverrides)
       socketServer.startup()
 
       replicaManager = new ReplicaManager(config, time, zkClient, kafkaScheduler, logManager, isShuttingDown)
@@ -293,8 +294,6 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime) extends Logg
       if (canShutdown) {
         Utils.swallow(controlledShutdown())
         brokerState.newState(BrokerShuttingDown)
-        if(kafkaHealthcheck != null)
-          Utils.swallow(kafkaHealthcheck.shutdown())
         if(socketServer != null)
           Utils.swallow(socketServer.shutdown())
         if(requestHandlerPool != null)

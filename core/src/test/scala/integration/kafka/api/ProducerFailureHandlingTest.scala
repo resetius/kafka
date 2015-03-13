@@ -46,16 +46,23 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
       override val zkConnect = TestZKUtils.zookeeperConnect
       override val autoCreateTopicsEnable = false
       override val messageMaxBytes = serverMessageMaxBytes
+      // TODO: Currently, when there is no topic in a cluster, the controller doesn't send any UpdateMetadataRequest to
+      // the broker. As a result, the live broker list in metadataCache is empty. If the number of live brokers is 0, we
+      // try to create the offset topic with the default offsets.topic.replication.factor of 3. The creation will fail
+      // since there is not enough live brokers. This causes testCannotSendToInternalTopic() to fail. Temporarily fixing
+      // the issue by overriding offsets.topic.replication.factor to 1 for now. When we fix KAFKA-1867, we need to
+      // remove the following config override.
+      override val offsetsTopicReplicationFactor = 1.asInstanceOf[Short]
     }
 
 
   private var consumer1: SimpleConsumer = null
   private var consumer2: SimpleConsumer = null
 
-  private var producer1: KafkaProducer = null
-  private var producer2: KafkaProducer = null
-  private var producer3: KafkaProducer = null
-  private var producer4: KafkaProducer = null
+  private var producer1: KafkaProducer[Array[Byte],Array[Byte]] = null
+  private var producer2: KafkaProducer[Array[Byte],Array[Byte]] = null
+  private var producer3: KafkaProducer[Array[Byte],Array[Byte]] = null
+  private var producer4: KafkaProducer[Array[Byte],Array[Byte]] = null
 
   private val topic1 = "topic-1"
   private val topic2 = "topic-2"
@@ -93,7 +100,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     TestUtils.createTopic(zkClient, topic1, 1, 2, servers)
 
     // send a too-large record
-    val record = new ProducerRecord(topic1, null, "key".getBytes, new Array[Byte](serverMessageMaxBytes + 1))
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topic1, null, "key".getBytes, new Array[Byte](serverMessageMaxBytes + 1))
     assertEquals("Returned metadata should have offset -1", producer1.send(record).get.offset, -1L)
   }
 
@@ -106,7 +113,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     TestUtils.createTopic(zkClient, topic1, 1, 2, servers)
 
     // send a too-large record
-    val record = new ProducerRecord(topic1, null, "key".getBytes, new Array[Byte](serverMessageMaxBytes + 1))
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topic1, null, "key".getBytes, new Array[Byte](serverMessageMaxBytes + 1))
     intercept[ExecutionException] {
       producer2.send(record).get
     }
@@ -118,7 +125,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
   @Test
   def testNonExistentTopic() {
     // send a record with non-exist topic
-    val record = new ProducerRecord(topic2, null, "key".getBytes, "value".getBytes)
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topic2, null, "key".getBytes, "value".getBytes)
     intercept[ExecutionException] {
       producer1.send(record).get
     }
@@ -143,7 +150,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     producer4 = TestUtils.createNewProducer("localhost:8686,localhost:4242", acks = 1, blockOnBufferFull = false, bufferSize = producerBufferSize)
 
     // send a record with incorrect broker list
-    val record = new ProducerRecord(topic1, null, "key".getBytes, "value".getBytes)
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topic1, null, "key".getBytes, "value".getBytes)
     intercept[ExecutionException] {
       producer4.send(record).get
     }
@@ -160,7 +167,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     TestUtils.createTopic(zkClient, topic1, 1, 2, servers)
 
     // first send a message to make sure the metadata is refreshed
-    val record1 = new ProducerRecord(topic1, null, "key".getBytes, "value".getBytes)
+    val record1 = new ProducerRecord[Array[Byte],Array[Byte]](topic1, null, "key".getBytes, "value".getBytes)
     producer1.send(record1).get
     producer2.send(record1).get
 
@@ -180,7 +187,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     val msgSize = producerBufferSize / tooManyRecords
     val value = new Array[Byte](msgSize)
     new Random().nextBytes(value)
-    val record2 = new ProducerRecord(topic1, null, "key".getBytes, value)
+    val record2 = new ProducerRecord[Array[Byte],Array[Byte]](topic1, null, "key".getBytes, value)
 
     intercept[KafkaException] {
       for (i <- 1 to tooManyRecords)
@@ -201,7 +208,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     TestUtils.createTopic(zkClient, topic1, 1, 2, servers)
 
     // create a record with incorrect partition id, send should fail
-    val record = new ProducerRecord(topic1, new Integer(1), "key".getBytes, "value".getBytes)
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topic1, new Integer(1), "key".getBytes, "value".getBytes)
     intercept[IllegalArgumentException] {
       producer1.send(record)
     }
@@ -221,7 +228,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     // create topic
     TestUtils.createTopic(zkClient, topic1, 1, 2, servers)
 
-    val record = new ProducerRecord(topic1, null, "key".getBytes, "value".getBytes)
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topic1, null, "key".getBytes, "value".getBytes)
 
     // first send a message to make sure the metadata is refreshed
     producer1.send(record).get
@@ -299,7 +306,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
 
   @Test(expected = classOf[InvalidTopicException])
   def testCannotSendToInternalTopic() {
-    producer1.send(new ProducerRecord(Topic.InternalTopics.head, "test".getBytes, "test".getBytes)).get
+    producer1.send(new ProducerRecord[Array[Byte],Array[Byte]](Topic.InternalTopics.head, "test".getBytes, "test".getBytes)).get
   }
 
   @Test
@@ -311,8 +318,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
 
     TestUtils.createTopic(zkClient, topicName, 1, 2, servers,topicProps)
 
-
-    val record = new ProducerRecord(topicName, null, "key".getBytes, "value".getBytes)
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topicName, null, "key".getBytes, "value".getBytes)
     try {
       producer3.send(record).get
       fail("Expected exception when producing to topic with fewer brokers than min.insync.replicas")
@@ -333,8 +339,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
 
     TestUtils.createTopic(zkClient, topicName, 1, 2, servers,topicProps)
 
-
-    val record = new ProducerRecord(topicName, null, "key".getBytes, "value".getBytes)
+    val record = new ProducerRecord[Array[Byte],Array[Byte]](topicName, null, "key".getBytes, "value".getBytes)
     // This should work
     producer3.send(record).get
 
@@ -366,7 +371,7 @@ class ProducerFailureHandlingTest extends JUnit3Suite with KafkaServerTestHarnes
     override def doWork(): Unit = {
       val responses =
         for (i <- sent+1 to sent+numRecords)
-        yield producer.send(new ProducerRecord(topic1, null, null, i.toString.getBytes))
+        yield producer.send(new ProducerRecord[Array[Byte],Array[Byte]](topic1, null, null, i.toString.getBytes))
       val futures = responses.toList
 
       try {

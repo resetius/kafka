@@ -16,20 +16,17 @@
  */
 package org.apache.kafka.clients.producer;
 
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-
-import java.util.List;
-
-
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.internals.Partitioner;
 import org.apache.kafka.common.Cluster;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.PartitionInfo;
 import org.junit.Test;
+
+import java.util.List;
+
+import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class PartitionerTest {
 
@@ -41,41 +38,41 @@ public class PartitionerTest {
     private Node node2 = new Node(2, "localhost", 101);
     private Node[] nodes = new Node[] { node0, node1, node2 };
     private String topic = "test";
-    private List<PartitionInfo> partitions = asList(new PartitionInfo(topic, 0, node0, nodes, nodes),
-                                                    new PartitionInfo(topic, 1, node1, nodes, nodes),
-                                                    new PartitionInfo(topic, 2, null, nodes, nodes));
+    // Intentionally make the partition list not in partition order to test the edge cases.
+    private List<PartitionInfo> partitions = asList(new PartitionInfo(topic, 1, null, nodes, nodes),
+                                                    new PartitionInfo(topic, 2, node1, nodes, nodes),
+                                                    new PartitionInfo(topic, 0, node0, nodes, nodes));
     private Cluster cluster = new Cluster(asList(node0, node1, node2), partitions);
 
     @Test
     public void testUserSuppliedPartitioning() {
         assertEquals("If the user supplies a partition we should use it.",
                      0,
-                     partitioner.partition(new ProducerRecord("test", 0, key, value), cluster));
+                     partitioner.partition(new ProducerRecord<byte[], byte[]>("test", 0, key, value), cluster));
     }
 
     @Test
     public void testKeyPartitionIsStable() {
-        int partition = partitioner.partition(new ProducerRecord("test", key, value), cluster);
+        int partition = partitioner.partition(new ProducerRecord<byte[], byte[]>("test", key, value), cluster);
         assertEquals("Same key should yield same partition",
                      partition,
-                     partitioner.partition(new ProducerRecord("test", key, "value2".getBytes()), cluster));
+                     partitioner.partition(new ProducerRecord<byte[], byte[]>("test", key, "value2".getBytes()), cluster));
     }
 
     @Test
-    public void testRoundRobinIsStable() {
-        int startPart = partitioner.partition(new ProducerRecord("test", value), cluster);
+    public void testRoundRobinWithUnavailablePartitions() {
+        // When there are some unavailable partitions, we want to make sure that (1) we always pick an available partition,
+        // and (2) the available partitions are selected in a round robin way.
+        int countForPart0 = 0;
+        int countForPart2 = 0;
         for (int i = 1; i <= 100; i++) {
-            int partition = partitioner.partition(new ProducerRecord("test", value), cluster);
-            assertEquals("Should yield a different partition each call with round-robin partitioner",
-                partition, (startPart + i) % 2);
-      }
-    }
-
-    @Test
-    public void testRoundRobinWithDownNode() {
-        for (int i = 0; i < partitions.size(); i++) {
-            int part = partitioner.partition(new ProducerRecord("test", value), cluster);
-            assertTrue("We should never choose a leader-less node in round robin", part >= 0 && part < 2);
+            int part = partitioner.partition(new ProducerRecord<byte[], byte[]>("test", value), cluster);
+            assertTrue("We should never choose a leader-less node in round robin", part == 0 || part == 2);
+            if (part == 0)
+                countForPart0++;
+            else
+                countForPart2++;
         }
+        assertEquals("The distribution between two available partitions should be even", countForPart0, countForPart2);
     }
 }

@@ -28,10 +28,7 @@ import java.util.concurrent.Future;
 import org.apache.kafka.clients.producer.internals.FutureRecordMetadata;
 import org.apache.kafka.clients.producer.internals.Partitioner;
 import org.apache.kafka.clients.producer.internals.ProduceRequestResult;
-import org.apache.kafka.common.Cluster;
-import org.apache.kafka.common.Metric;
-import org.apache.kafka.common.PartitionInfo;
-import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.*;
 
 
 /**
@@ -40,11 +37,11 @@ import org.apache.kafka.common.TopicPartition;
  * By default this mock will synchronously complete each send call successfully. However it can be configured to allow
  * the user to control the completion of the call and supply an optional error for the producer to throw.
  */
-public class MockProducer implements Producer {
+public class MockProducer implements Producer<byte[],byte[]> {
 
     private final Cluster cluster;
     private final Partitioner partitioner = new Partitioner();
-    private final List<ProducerRecord> sent;
+    private final List<ProducerRecord<byte[], byte[]>> sent;
     private final Deque<Completion> completions;
     private boolean autoComplete;
     private Map<TopicPartition, Long> offsets;
@@ -62,7 +59,7 @@ public class MockProducer implements Producer {
         this.cluster = cluster;
         this.autoComplete = autoComplete;
         this.offsets = new HashMap<TopicPartition, Long>();
-        this.sent = new ArrayList<ProducerRecord>();
+        this.sent = new ArrayList<ProducerRecord<byte[], byte[]>>();
         this.completions = new ArrayDeque<Completion>();
     }
 
@@ -90,7 +87,7 @@ public class MockProducer implements Producer {
      * @see #history()
      */
     @Override
-    public synchronized Future<RecordMetadata> send(ProducerRecord record) {
+    public synchronized Future<RecordMetadata> send(ProducerRecord<byte[], byte[]> record) {
         return send(record, null);
     }
 
@@ -100,7 +97,7 @@ public class MockProducer implements Producer {
      * @see #history()
      */
     @Override
-    public synchronized Future<RecordMetadata> send(ProducerRecord record, Callback callback) {
+    public synchronized Future<RecordMetadata> send(ProducerRecord<byte[],byte[]> record, Callback callback) {
         int partition = 0;
         if (this.cluster.partitionsForTopic(record.topic()) != null)
             partition = partitioner.partition(record, this.cluster);
@@ -136,7 +133,7 @@ public class MockProducer implements Producer {
         return this.cluster.partitionsForTopic(topic);
     }
 
-    public Map<String, Metric> metrics() {
+    public Map<MetricName, Metric> metrics() {
         return Collections.emptyMap();
     }
 
@@ -147,8 +144,8 @@ public class MockProducer implements Producer {
     /**
      * Get the list of sent records since the last call to {@link #clear()}
      */
-    public synchronized List<ProducerRecord> history() {
-        return new ArrayList<ProducerRecord>(this.sent);
+    public synchronized List<ProducerRecord<byte[], byte[]>> history() {
+        return new ArrayList<ProducerRecord<byte[], byte[]>>(this.sent);
     }
 
     /**

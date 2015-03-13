@@ -46,6 +46,13 @@ class OffsetCommitTest extends JUnit3Suite with ZooKeeperTestHarness {
   override def setUp() {
     super.setUp()
     val config: Properties = createBrokerConfig(1, brokerPort)
+    // TODO: Currently, when there is no topic in a cluster, the controller doesn't send any UpdateMetadataRequest to
+    // the broker. As a result, the live broker list in metadataCache is empty. This causes the ConsumerMetadataRequest
+    // to fail since if the number of live brokers is 0, we try to create the offset topic with the default
+    // offsets.topic.replication.factor of 3. The creation will fail since there is not enough live brokers. In order
+    // for the unit test to pass, overriding offsets.topic.replication.factor to 1 for now. When we fix KAFKA-1867, we
+    // need to remove the following config override.
+    config.put("offsets.topic.replication.factor", "1")
     val logDirPath = config.getProperty("log.dir")
     logDir = new File(logDirPath)
     time = new MockTime()
@@ -79,7 +86,7 @@ class OffsetCommitTest extends JUnit3Suite with ZooKeeperTestHarness {
     // create the topic
     createTopic(zkClient, topic, partitionReplicaAssignment = expectedReplicaAssignment, servers = Seq(server))
 
-    val commitRequest = OffsetCommitRequest("test-group", immutable.Map(topicAndPartition -> OffsetAndMetadata(offset=42L)))
+    val commitRequest = OffsetCommitRequest(group, immutable.Map(topicAndPartition -> OffsetAndMetadata(offset=42L)))
     val commitResponse = simpleConsumer.commitOffsets(commitRequest)
 
     assertEquals(ErrorMapping.NoError, commitResponse.commitStatus.get(topicAndPartition).get)
@@ -109,6 +116,13 @@ class OffsetCommitTest extends JUnit3Suite with ZooKeeperTestHarness {
     assertEquals("some metadata", fetchResponse1.requestInfo.get(topicAndPartition).get.metadata)
     assertEquals(100L, fetchResponse1.requestInfo.get(topicAndPartition).get.offset)
 
+    // Fetch an unknown topic and verify
+    val unknownTopicAndPartition = TopicAndPartition("unknownTopic", 0)
+    val fetchRequest2 = OffsetFetchRequest(group, Seq(unknownTopicAndPartition))
+    val fetchResponse2 = simpleConsumer.fetchOffsets(fetchRequest2)
+
+    assertEquals(OffsetMetadataAndError.UnknownTopicOrPartition, fetchResponse2.requestInfo.get(unknownTopicAndPartition).get)
+    assertEquals(1, fetchResponse2.requestInfo.size)
   }
 
   @Test

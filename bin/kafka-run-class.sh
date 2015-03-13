@@ -32,7 +32,7 @@ if [ ! -d "$LOG_DIR" ]; then
 fi
 
 if [ -z "$SCALA_VERSION" ]; then
-	SCALA_VERSION=2.10.1
+	SCALA_VERSION=2.10.4
 fi
 
 if [ -z "$SCALA_BINARY_VERSION" ]; then
@@ -112,7 +112,7 @@ fi
 
 # JVM performance options
 if [ -z "$KAFKA_JVM_PERFORMANCE_OPTS" ]; then
-  KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:+UseCompressedOops -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC -Djava.awt.headless=true"
+  KAFKA_JVM_PERFORMANCE_OPTS="-server -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC -Djava.awt.headless=true"
 fi
 
 

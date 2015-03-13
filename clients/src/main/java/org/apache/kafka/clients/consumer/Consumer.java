@@ -18,12 +18,13 @@ import java.util.Map;
 
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.MetricName;
 
 /**
  * @see KafkaConsumer
  * @see MockConsumer
  */
-public interface Consumer extends Closeable {
+public interface Consumer<K,V> extends Closeable {
 
     /**
      * Incrementally subscribe to the given list of topics. This API is mutually exclusive to 
@@ -63,7 +64,7 @@ public interface Consumer extends Closeable {
      *         of data is controlled by {@link ConsumerConfig#FETCH_MIN_BYTES_CONFIG} and {@link ConsumerConfig#FETCH_MAX_WAIT_MS_CONFIG}.
      *         If no data is available for timeout ms, returns an empty list
      */
-    public Map<String, ConsumerRecords> poll(long timeout);
+    public Map<String, ConsumerRecords<K,V>> poll(long timeout);
 
     /**
      * Commits offsets returned on the last {@link #poll(long) poll()} for the subscribed list of topics and partitions.
@@ -111,11 +112,11 @@ public interface Consumer extends Closeable {
      * @return The offsets for messages that were written to the server before the specified timestamp.
      */
     public Map<TopicPartition, Long> offsetsBeforeTime(long timestamp, Collection<TopicPartition> partitions);
-    
+
     /**
      * Return a map of metrics maintained by the consumer
      */
-    public Map<String, ? extends Metric> metrics();
+    public Map<MetricName, ? extends Metric> metrics();
 
     /**
      * Close this consumer

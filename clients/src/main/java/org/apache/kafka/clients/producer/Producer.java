@@ -23,15 +23,15 @@ import java.util.concurrent.Future;
 
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.MetricName;
 
 
 /**
  * The interface for the {@link KafkaProducer}
- * 
  * @see KafkaProducer
  * @see MockProducer
  */
-public interface Producer extends Closeable {
+public interface Producer<K,V> extends Closeable {
 
     /**
      * Send the given record asynchronously and return a future which will eventually contain the response information.
@@ -39,12 +39,12 @@ public interface Producer extends Closeable {
      * @param record The record to send
      * @return A future which will eventually contain the response information
      */
-    public Future<RecordMetadata> send(ProducerRecord record);
+    public Future<RecordMetadata> send(ProducerRecord<K,V> record);
 
     /**
      * Send a record and invoke the given callback when the record has been acknowledged by the server
      */
-    public Future<RecordMetadata> send(ProducerRecord record, Callback callback);
+    public Future<RecordMetadata> send(ProducerRecord<K,V> record, Callback callback);
 
     /**
      * Get a list of partitions for the given topic for custom partition assignment. The partition metadata will change
@@ -55,7 +55,7 @@ public interface Producer extends Closeable {
     /**
      * Return a map of metrics maintained by the producer
      */
-    public Map<String, ? extends Metric> metrics();
+    public Map<MetricName, ? extends Metric> metrics();
 
     /**
      * Close this producer

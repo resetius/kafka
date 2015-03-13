@@ -20,10 +20,10 @@ package kafka.api
 import java.nio.ByteBuffer
 
 import kafka.utils.Logging
-import kafka.common.TopicAndPartition
+import kafka.common.{ErrorMapping, TopicAndPartition}
 
 object OffsetCommitResponse extends Logging {
-  val CurrentVersion: Short = 0
+  val CurrentVersion: Short = 1
 
   def readFrom(buffer: ByteBuffer): OffsetCommitResponse = {
     val correlationId = buffer.getInt
@@ -41,11 +41,16 @@ object OffsetCommitResponse extends Logging {
   }
 }
 
+/**
+ *  Single constructor for both version 0 and 1 since they have the same format.
+ */
 case class OffsetCommitResponse(commitStatus: Map[TopicAndPartition, Short],
                                 correlationId: Int = 0)
     extends RequestOrResponse() {
 
   lazy val commitStatusGroupedByTopic = commitStatus.groupBy(_._1.topic)
+
+  def hasError = commitStatus.exists{ case (topicAndPartition, errorCode) => errorCode != ErrorMapping.NoError }
 
   def writeTo(buffer: ByteBuffer) {
     buffer.putInt(correlationId)
