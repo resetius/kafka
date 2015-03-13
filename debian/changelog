@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2.1-0) trusty; urgency=medium
+
+  * 0.8.2.1
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 13 Mar 2015 18:08:43 +0300
+
 statbox-kafka (0.8.2-23) trusty; urgency=medium
 
   * fetchSize: strange incr size condition

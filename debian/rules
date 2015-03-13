@@ -5,7 +5,7 @@
 install:
 	@set -e;\
 		GRADLE_USER_HOME=gradletmp ./gradle-2.1/bin/gradle -PscalaVersion=2.10.4 releaseTarGz;\
-		tar xvf ./core/build/distributions/kafka_2.10-0.8.2-beta.tgz;\
+		tar xvf ./core/build/distributions/kafka_2.10-0.8.2.1.tgz;\
 	dh_install --list-missing 
 	dh_installinit -A --no-start --name=statbox-kafka -r -u defaults
 	dh_installdeb
