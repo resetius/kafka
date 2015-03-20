@@ -715,6 +715,7 @@ object TestUtils extends Logging {
       topicConfigs = Map(),
       defaultConfig = defaultConfig,
       cleanerConfig = cleanerConfig,
+      balancerConfig = BalancerConfig(enable = false, groupMatch = ".".r, groupFields = Seq()),
       ioThreads = 4,
       flushCheckMs = 1000L,
       flushCheckpointMs = 10000L,
