@@ -520,33 +520,44 @@ class Log(var dir: File,
         val segmentFile = segment.log.file.getName
         val indexFile   = segment.index.file.getName
         val segmentDir  = segment.log.file.getParentFile.getAbsolutePath
-        if (segmentDir != newdir.getAbsolutePath) {
+
+        val deletedSuffix = lock synchronized {
+          segmentFile.endsWith(DeletedFileSuffix)
+        }
+
+        if (segmentDir != newdir.getAbsolutePath && ! deletedSuffix) {
           warn("moving %s -> %s".format(segment.log.file.getAbsolutePath, newdir + "/" + segmentFile))
 
-          val dataFile = Utils.createFile(newdir + "/" + segmentFile)
-          val data = Utils.openChannel(dataFile, mutable = true)
-          segment.log.writeTo(data, 0, segment.log.sizeInBytes())
+          val newSegment = segment.synchronized { if (segment.log.channel.isOpen) {
+            val dataFile = Utils.createFile(newdir + "/" + segmentFile)
+            val data = Utils.openChannel(dataFile, mutable = true)
+            segment.log.writeTo(data, 0, segment.log.sizeInBytes())
 
-          val index = Utils.openChannel(Utils.createFile(newdir + "/" + indexFile), mutable = true)
-          val indexSrc = Utils.openChannel(segment.index.file, mutable = false)
-          index.transferFrom(indexSrc, 0, segment.index.sizeInBytes())
+            val index = Utils.openChannel(Utils.createFile(newdir + "/" + indexFile), mutable = true)
+            val indexSrc = Utils.openChannel(segment.index.file, mutable = false)
+            index.transferFrom(indexSrc, 0, segment.index.sizeInBytes())
 
-          data.close()
-          index.close()
-          indexSrc.close()
+            data.close()
+            index.close()
+            indexSrc.close()
 
-          dataFile.setLastModified(segment.log.file.lastModified())
+            dataFile.setLastModified(segment.log.file.lastModified())
 
-          val newSegment = new LogSegment(dir = newdir,
-            startOffset = segment.index.baseOffset,
-            indexIntervalBytes = config.indexInterval,
-            maxIndexSize = config.maxIndexSize,
-            rollJitterMs = config.randomSegmentJitter,
-            time = time)
+            new LogSegment(dir = newdir,
+              startOffset = segment.index.baseOffset,
+              indexIntervalBytes = config.indexInterval,
+              maxIndexSize = config.maxIndexSize,
+              rollJitterMs = config.randomSegmentJitter,
+              time = time)
+          } else {
+            null
+          }}
 
-          val prev = addSegment(newSegment)
-          if (prev != null) {
-            prev.delete()
+          if (newSegment != null) {
+            val prev = addSegment(newSegment)
+            if (prev != null) {
+              prev.delete()
+            }
           }
         }
       }

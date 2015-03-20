@@ -275,12 +275,14 @@ class LogSegment(val log: FileMessageSet,
    * @throws KafkaStorageException if the delete fails.
    */
   def delete() {
-    val deletedLog = log.delete()
-    val deletedIndex = index.delete()
-    if(!deletedLog && log.file.exists)
-      throw new KafkaStorageException("Delete of log " + log.file.getName + " failed.")
-    if(!deletedIndex && index.file.exists)
-      throw new KafkaStorageException("Delete of index " + index.file.getName + " failed.")
+    this synchronized {
+      val deletedLog = log.delete()
+      val deletedIndex = index.delete()
+      if (!deletedLog && log.file.exists)
+        throw new KafkaStorageException("Delete of log " + log.file.getName + " failed.")
+      if (!deletedIndex && index.file.exists)
+        throw new KafkaStorageException("Delete of index " + index.file.getName + " failed.")
+    }
   }
   
   /**
