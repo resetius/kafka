@@ -18,9 +18,7 @@
 package kafka.server
 
 import kafka.admin._
-import kafka.log.LogConfig
-import kafka.log.CleanerConfig
-import kafka.log.LogManager
+import kafka.log.{BalancerConfig, LogConfig, CleanerConfig, LogManager}
 import kafka.utils._
 import java.util.concurrent._
 import atomic.{AtomicInteger, AtomicBoolean}
@@ -358,10 +356,15 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime) extends Logg
                                       maxIoBytesPerSecond = config.logCleanerIoMaxBytesPerSecond,
                                       backOffMs = config.logCleanerBackoffMs,
                                       enableCleaner = config.logCleanerEnable)
+
+    val balancerConfig = BalancerConfig(enable = config.diskBalancerEnable,
+                                        groupMatch = config.diskBalancerGroupMatch,
+                                        groupFields = config.diskBalancerGroupFields)
     new LogManager(logDirs = config.logDirs.map(new File(_)).toArray,
                    topicConfigs = configs,
                    defaultConfig = defaultLogConfig,
                    cleanerConfig = cleanerConfig,
+                   balancerConfig = balancerConfig,
                    ioThreads = config.numRecoveryThreadsPerDataDir,
                    flushCheckMs = config.logFlushSchedulerIntervalMs,
                    flushCheckpointMs = config.logFlushOffsetCheckpointIntervalMs,

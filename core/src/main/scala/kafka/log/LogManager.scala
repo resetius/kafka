@@ -40,6 +40,7 @@ class LogManager(val logDirs: Array[File],
                  val topicConfigs: Map[String, LogConfig],
                  val defaultConfig: LogConfig,
                  val cleanerConfig: CleanerConfig,
+                 val balancerConfig: BalancerConfig,
                  ioThreads: Int,
                  val flushCheckMs: Long,
                  val flushCheckpointMs: Long,
@@ -534,21 +535,32 @@ class LogManager(val logDirs: Array[File],
   }
 
   def balance(): Unit = synchronized {
-    warn("start balancing")
-    //TODO: group rule in config
-    var byTopic = allLogs().groupBy(_.topicAndPartition.topic.split("--").last)
-    var other = Seq.empty[Log]
-    var drop  = Set.empty[String]
-    for ((k, v) <- byTopic) {
-      if (v.size <= 1) {
-        drop  += k
-        other ++= v.toSeq
-      }
-    }
-    byTopic --= drop
+    if (balancerConfig.enable) {
+        warn("start balancing")
 
-    byTopic.foreach({case (k, v) => balanceGroup(k, v)})
-    balanceGroup("__other", other)
-    warn("balancing done")
+      var byTopic = allLogs().groupBy(
+        x => balancerConfig.groupMatch.findFirstMatchIn(x.topicAndPartition.topic).map(
+          y => balancerConfig.groupFields.map(i => if (i < y.groupCount) {
+            y.group(i)
+          } else {
+            ""
+          }).mkString(",")
+        ).getOrElse("__unknown")
+      )
+
+      var other = Seq.empty[Log]
+      var drop = Set.empty[String]
+      for ((k, v) <- byTopic) {
+        if (v.size <= 1) {
+          drop += k
+          other ++= v.toSeq
+        }
+      }
+      byTopic --= drop
+
+      byTopic.foreach({ case (k, v) => balanceGroup(k, v) })
+      balanceGroup("__other", other)
+      warn("balancing done")
+    }
   }
 }

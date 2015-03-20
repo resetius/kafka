@@ -346,4 +346,7 @@ class KafkaConfig private (val props: VerifiableProperties) extends ZKConfig(pro
   /* Enables delete topic. Delete topic through the admin tool will have no effect if this config is turned off */
   val deleteTopicEnable = props.getBoolean("delete.topic.enable", false)
 
+  val diskBalancerEnable = props.getBoolean("disk.balancer.enable", false)
+  val diskBalancerGroupMatch = props.getString("disk.balancer.group.match", "(.*)").r
+  val diskBalancerGroupFields = props.getString("disk.balancer.group.fields", "1").split(',').map(_.toInt)
 }
