@@ -540,7 +540,7 @@ class LogManager(val logDirs: Array[File],
 
       var byTopic = allLogs().groupBy(
         x => balancerConfig.groupMatch.findFirstMatchIn(x.topicAndPartition.topic).map(
-          y => balancerConfig.groupFields.map(i => if (i < y.groupCount) {
+          y => balancerConfig.groupFields.map(i => if (i <= y.groupCount) {
             y.group(i)
           } else {
             ""
