@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2.1-3) trusty; urgency=medium
+
+  * fix balancer config
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 31 Mar 2015 22:41:28 +0300
+
 statbox-kafka (0.8.2.1-2) trusty; urgency=medium
 
   * balancer config 
