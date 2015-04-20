@@ -1,10 +1,13 @@
 Source: statbox-kafka
+Priority: optional
 Maintainer: Alexey Ozeritsky <aozeritsky@yandex-team.ru>
-Build-Depends: debhelper, java7-jdk
+Vcs-Browser: https://github.yandex-team.ru/statbox/kafka
+Vcs-Git: https://github.yandex-team.ru/statbox/kafka.git
+Build-Depends: debhelper (>=9), java7-jdk, gradle
+Standards-Version: 3.9.3
 
 Package: statbox-kafka
 Architecture: all
 Depends: ${shlibs:Depends}, java7-runtime
-Description: statbox-kafka
- statbox-kafka
+Description: Apache Kafka with Statbox patches
 
