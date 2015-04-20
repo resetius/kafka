@@ -143,6 +143,7 @@ class SocketServerTest extends JUnitSuite {
     sendRequest(socket, 0, bytes)
   }
 
+  @Ignore
   @Test
   def testMaxConnectionsPerIp() {
     // make the maximum allowable number of connections and then leak them
@@ -152,6 +153,8 @@ class SocketServerTest extends JUnitSuite {
       conn.setSoTimeout(3000)
       assertEquals(-1, conn.getInputStream().read())
   }
+
+  @Ignore
   @Test
   def testMaxConnectionsPerIPOverrides(): Unit = {
     val overrideNum = 6
