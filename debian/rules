@@ -1,25 +1,12 @@
 #! /usr/bin/make -f
 
-.PHONY: binary build clean
+%:
+	dh $@
 
-install:
-	dh_install --list-missing 
-	dh_installinit -A --no-start --no-restart-on-upgrade
-	dh_installdeb
-	dh_makeshlibs -pstatbox-kafka
-	dh_shlibdeps 
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
+override_dh_auto_build:
+	gradle
+	./gradlew -PscalaVersion=2.10.4 clean releaseTarGz
+	tar xf ./core/build/distributions/kafka_2.10-0.8.2.1.tgz
 
-binary: install
-
-build: clean
-	dh_testdir
-	@set -e;\
-		gradle
-		./gradlew -PscalaVersion=2.10.4 jar
-
-clean:
-	dh_clean
-	rm -rf __build
+override_dh_installinit:
+	dh_installinit --name=statbox-kafka --noscripts 

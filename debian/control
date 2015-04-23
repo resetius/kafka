@@ -1,4 +1,5 @@
 Source: statbox-kafka
+Section: misc
 Priority: optional
 Maintainer: Alexey Ozeritsky <aozeritsky@yandex-team.ru>
 Vcs-Browser: https://github.yandex-team.ru/statbox/kafka
@@ -8,6 +9,6 @@ Standards-Version: 3.9.3
 
 Package: statbox-kafka
 Architecture: all
-Depends: ${shlibs:Depends}, java7-runtime
-Description: Apache Kafka with Statbox patches
-
+Depends: ${misc:Depends}, java7-runtime
+Description: Statbox Kafka
+ Apache Kafka with Statbox patches
