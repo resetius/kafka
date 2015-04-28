@@ -9,6 +9,6 @@ Standards-Version: 3.9.3
 
 Package: statbox-kafka
 Architecture: all
-Depends: ${misc:Depends}, java7-runtime
+Depends: java7-runtime
 Description: Statbox Kafka
  Apache Kafka with Statbox patches
