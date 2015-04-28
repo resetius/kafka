@@ -1,3 +1,11 @@
+statbox-kafka (0.8.2.1-6) trusty; urgency=medium
+
+  * kafka-2096; Enable keepalive socket option for broker to prevent socket
+	leak; patched by Allen Wang; reviewed by Jun Rao
+  * KAFKA-2114 Unable to change min.insync.replicas default; reviewed by Neha
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 28 Apr 2015 15:18:17 +0300
+
 statbox-kafka (0.8.2.1-5) trusty; urgency=medium
 
   * init->upstart 
