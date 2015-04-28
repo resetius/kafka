@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2.1-7) trusty; urgency=medium
+
+  * fix deps 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 28 Apr 2015 15:45:02 +0300
+
 statbox-kafka (0.8.2.1-6) trusty; urgency=medium
 
   * kafka-2096; Enable keepalive socket option for broker to prevent socket
