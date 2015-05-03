@@ -64,6 +64,8 @@ class ReplicaManager(val config: KafkaConfig,
   this.logIdent = "[Replica Manager on Broker " + localBrokerId + "]: "
   val stateChangeLogger = KafkaController.stateChangeLogger
 
+  var allHighWaterMarks = Map.empty[TopicAndPartition, (String, Long)]
+
   var producerRequestPurgatory: ProducerRequestPurgatory = null
   var fetchRequestPurgatory: FetchRequestPurgatory = null
 
@@ -135,6 +137,9 @@ class ReplicaManager(val config: KafkaConfig,
 
   def startup() {
     // start ISR expiration thread
+    for ((dir, checkpoint) <- highWatermarkCheckpoints) {
+      allHighWaterMarks ++= checkpoint.read().map({case (t, offset) => (t, (dir, offset))})
+    }
     scheduler.schedule("isr-expiration", maybeShrinkIsr, period = config.replicaLagTimeMaxMs, unit = TimeUnit.MILLISECONDS)
   }
 
@@ -146,8 +151,10 @@ class ReplicaManager(val config: KafkaConfig,
       case Some(partition) =>
         if(deletePartition) {
           val removedPartition = allPartitions.remove((topic, partitionId))
-          if (removedPartition != null)
+          if (removedPartition != null) {
             removedPartition.delete() // this will delete the local log
+            allHighWaterMarks -= TopicAndPartition(topic, partitionId)
+          }
         }
       case None =>
         // Delete log and corresponding folders in case replica manager doesn't hold them anymore.
@@ -156,7 +163,8 @@ class ReplicaManager(val config: KafkaConfig,
           val topicAndPartition = TopicAndPartition(topic, partitionId)
 
           if(logManager.getLog(topicAndPartition).isDefined) {
-              logManager.deleteLog(topicAndPartition)
+            logManager.deleteLog(topicAndPartition)
+            allHighWaterMarks -= topicAndPartition
           }
         }
         stateChangeLogger.trace("Broker %d ignoring stop replica (delete=%s) for partition [%s,%d] as replica doesn't exist on broker"
@@ -589,6 +597,32 @@ class ReplicaManager(val config: KafkaConfig,
    */
   def checkpointHighWatermarks() {
     val replicas = allPartitions.values.map(_.getReplica(config.brokerId)).collect{case Some(replica) => replica}
+
+    allHighWaterMarks ++= replicas.filter(_.log.isDefined).map({
+      case replica =>
+        val dir = replica.log.get.dir.getParentFile.getAbsolutePath
+        val topicAndPartition = TopicAndPartition(replica.topic, replica.partitionId)
+        val hw = replica.highWatermark.messageOffset
+
+        topicAndPartition -> (dir, hw)
+    })
+
+    val hwmsByDir = allHighWaterMarks.groupBy({
+      case (topicAndPartition, (dir, offset)) => dir
+    })
+
+    for ((dir, hwms) <- hwmsByDir) {
+      val save = hwms.map({case (topicAndPartition, (_, offset)) => topicAndPartition -> offset})
+      try {
+        highWatermarkCheckpoints(dir).write(save)
+      } catch {
+        case e: IOException =>
+          fatal("Error writing to highwatermark file: ", e)
+          Runtime.getRuntime().halt(1)
+      }
+    }
+
+    /*
     val replicasByDir = replicas.filter(_.log.isDefined).groupBy(_.log.get.dir.getParentFile.getAbsolutePath)
     for((dir, reps) <- replicasByDir) {
       val hwms = reps.map(r => (new TopicAndPartition(r) -> r.highWatermark.messageOffset)).toMap
@@ -600,6 +634,7 @@ class ReplicaManager(val config: KafkaConfig,
           Runtime.getRuntime().halt(1)
       }
     }
+    */
   }
 
   def shutdown() {
