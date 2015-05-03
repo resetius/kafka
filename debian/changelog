@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2.1-10) trusty; urgency=medium
+
+  * Don't override HighWaterMarks on bad metadata
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Sun, 03 May 2015 23:36:31 +0300
+
 statbox-kafka (0.8.2.1-9) trusty; urgency=medium
 
   * Fix truncation 
