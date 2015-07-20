@@ -30,7 +30,8 @@ class Replica(val brokerId: Int,
               initialHighWatermarkValue: Long = 0L,
               val log: Option[Log] = None) extends Logging {
   // the high watermark offset value, in non-leader replicas only its message offsets are kept
-  @volatile private[this] var highWatermarkMetadata: LogOffsetMetadata = new LogOffsetMetadata(initialHighWatermarkValue)
+  @volatile private[this] var highWatermarkMetadata: LogOffsetMetadata =
+    log.map(l => new LogOffsetMetadata(initialHighWatermarkValue.max(l.readHighWatermark()))).getOrElse(new LogOffsetMetadata(initialHighWatermarkValue))
   // the log end offset value, kept in all replicas;
   // for local replica it is the log's end offset, for remote replicas its value is only updated by follower fetch
   @volatile private[this] var logEndOffsetMetadata: LogOffsetMetadata = LogOffsetMetadata.UnknownOffsetMetadata
@@ -79,6 +80,9 @@ class Replica(val brokerId: Int,
 
   def highWatermark_=(newHighWatermark: LogOffsetMetadata) {
     if (isLocal) {
+      if (highWatermarkMetadata.messageOffset != newHighWatermark.messageOffset) {
+        log.get.writeHighWatermark(highWatermarkMetadata.messageOffset)
+      }
       highWatermarkMetadata = newHighWatermark
       trace("Setting high watermark for replica %d partition [%s,%d] on broker %d to [%s]"
         .format(brokerId, topic, partitionId, brokerId, newHighWatermark))
@@ -91,7 +95,7 @@ class Replica(val brokerId: Int,
 
   def convertHWToLocalOffsetMetadata() = {
     if (isLocal) {
-      highWatermarkMetadata = log.get.convertToOffsetMetadata(highWatermarkMetadata.messageOffset)
+      highWatermark = log.get.convertToOffsetMetadata(highWatermarkMetadata.messageOffset)
     } else {
       throw new KafkaException("Should not construct complete high watermark on partition [%s,%d]'s non-local replica %d".format(topic, partitionId, brokerId))
     }

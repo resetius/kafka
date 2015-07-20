@@ -17,6 +17,8 @@
 
 package kafka.log
 
+import java.nio.ByteBuffer
+
 import kafka.utils._
 import kafka.message._
 import kafka.common._
@@ -83,6 +85,40 @@ class Log(var dir: File,
       config.segmentSize
     else
       0
+  }
+
+  private val hwmFile = new File(dir.getAbsolutePath + "/highwatermark.bin")
+  private val hwmChannel = FileMessageSet.openChannel(hwmFile, mutable = true)
+
+  def writeHighWatermark(offset: Long): Unit = {
+    try {
+      val buffer = ByteBuffer.allocate(4 + 8)
+      buffer.putInt(0)
+      buffer.putLong(offset)
+      buffer.rewind()
+      hwmChannel.position(0)
+      hwmChannel.write(buffer)
+    } catch {
+      case e: IOException => throw new KafkaStorageException("I/O exception in write highwatermark to '%s'".format(hwmFile.getAbsolutePath), e)
+    }
+  }
+
+  def readHighWatermark(): Long = {
+    val buffer = ByteBuffer.allocate(4+8)
+    hwmChannel.position(0)
+    hwmChannel.read(buffer)
+
+    if (buffer.remaining() > 4) {
+      val version = buffer.getInt
+      if (version == 0) {
+        buffer.getLong
+      } else {
+        warn("%s: unknown version: %d".format(hwmFile.getAbsolutePath, version))
+        0L
+      }
+    } else {
+      0L
+    }
   }
 
   /* the actual segments of the log */
@@ -289,6 +325,7 @@ class Log(var dir: File,
     lock synchronized {
       for(seg <- logSegments)
         seg.close()
+      hwmChannel.close()
     }
   }
 
@@ -758,6 +795,8 @@ class Log(var dir: File,
       removeLogMetrics()
       logSegments.foreach(_.delete())
       segments.clear()
+      CoreUtils.swallow(hwmChannel.close())
+      hwmFile.delete()
       CoreUtils.rm(dir)
     }
   }

@@ -90,6 +90,7 @@ class SimpleFetchTest {
         new LogOffsetMetadata(0L, 0L, 0),
         new ByteBufferMessageSet(messagesToLEO)
       )).anyTimes()
+    EasyMock.expect(log.writeHighWatermark(0L)).times(1)
     EasyMock.replay(log)
 
     // create the log manager that is aware of this mock log
