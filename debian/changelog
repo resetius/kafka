@@ -1,3 +1,9 @@
+statbox-kafka (0.8.2.1-12) trusty; urgency=medium
+
+  * [LOGBROKER-950] save highwatermark in separate files* 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 21 Jul 2015 15:15:10 +0300
+
 statbox-kafka (0.8.2.1-11) trusty; urgency=medium
 
   * [LOGBROKER-918] add default log4j.properties, change config path
