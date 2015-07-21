@@ -17,6 +17,8 @@
 
 package kafka.log
 
+import java.nio.ByteBuffer
+
 import kafka.utils._
 import kafka.message._
 import kafka.common._
@@ -61,6 +63,40 @@ class Log(var dir: File,
 
   /* last time it was flushed */
   private val lastflushedTime = new AtomicLong(time.milliseconds)
+
+  private val hwmFile = new File(dir.getAbsolutePath + "/highwatermark.bin")
+  private val hwmChannel = Utils.openChannel(hwmFile, mutable = true)
+
+  def writeHighWatermark(offset: Long): Unit = {
+    try {
+      val buffer = ByteBuffer.allocate(4 + 8)
+      buffer.putInt(0)
+      buffer.putLong(offset)
+      buffer.rewind()
+      hwmChannel.position(0)
+      hwmChannel.write(buffer)
+    } catch {
+      case e: IOException => throw new KafkaStorageException("I/O exception in write highwatermark to '%s'".format(hwmFile.getAbsolutePath), e)
+    }
+  }
+
+  def readHighWatermark(): Long = {
+    val buffer = ByteBuffer.allocate(4+8)
+    hwmChannel.position(0)
+    hwmChannel.read(buffer)
+
+    if (buffer.remaining() > 4) {
+      val version = buffer.getInt
+      if (version == 0) {
+        buffer.getLong
+      } else {
+        warn("%s: unknown version: %d".format(hwmFile.getAbsolutePath, version))
+        0L
+      }
+    } else {
+      0L
+    }
+  }
 
   /* the actual segments of the log */
   private val segments: ConcurrentNavigableMap[java.lang.Long, LogSegment] = new ConcurrentSkipListMap[java.lang.Long, LogSegment]
@@ -237,6 +273,7 @@ class Log(var dir: File,
     lock synchronized {
       for(seg <- logSegments)
         seg.close()
+      hwmChannel.close()
     }
   }
 
@@ -697,6 +734,8 @@ class Log(var dir: File,
     lock synchronized {
       logSegments.foreach(_.delete())
       segments.clear()
+      Utils.swallow(hwmChannel.close())
+      hwmFile.delete()
       Utils.rm(dir)
     }
   }

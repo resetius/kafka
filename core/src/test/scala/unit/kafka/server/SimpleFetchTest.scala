@@ -64,6 +64,7 @@ class SimpleFetchTest extends JUnit3Suite {
     EasyMock.replay(zkClient)
 
     val log = EasyMock.createMock(classOf[kafka.log.Log])
+    EasyMock.expect(log.readHighWatermark).andReturn(0L).times(1)
     EasyMock.expect(log.logEndOffset).andReturn(leo).anyTimes()
     EasyMock.expect(log)
     EasyMock.expect(log.read(0, fetchSize, Some(hw))).andReturn(
@@ -71,6 +72,7 @@ class SimpleFetchTest extends JUnit3Suite {
         new LogOffsetMetadata(0L, 0L, leo.toInt),
         new ByteBufferMessageSet(messages)
       )).anyTimes()
+    EasyMock.expect(log.writeHighWatermark(0L)).times(1)
     EasyMock.replay(log)
 
     val logManager = EasyMock.createMock(classOf[kafka.log.LogManager])
@@ -155,12 +157,14 @@ class SimpleFetchTest extends JUnit3Suite {
     EasyMock.replay(zkClient)
 
     val log = EasyMock.createMock(classOf[kafka.log.Log])
+    EasyMock.expect(log.readHighWatermark).andReturn(0L).times(1)
     EasyMock.expect(log.logEndOffset).andReturn(leo).anyTimes()
     EasyMock.expect(log.read(followerLEO, Integer.MAX_VALUE, None)).andReturn(
       new FetchDataInfo(
         new LogOffsetMetadata(followerLEO, 0L, followerLEO),
         new ByteBufferMessageSet(messages)
       )).anyTimes()
+    EasyMock.expect(log.writeHighWatermark(0L)).times(1)
     EasyMock.replay(log)
 
     val logManager = EasyMock.createMock(classOf[kafka.log.LogManager])
