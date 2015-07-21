@@ -1,3 +1,10 @@
+statbox-kafka (0.8.2.1-11) trusty; urgency=medium
+
+  * [LOGBROKER-918] add default log4j.properties, change config path
+  * [LOGBROKER-897] copy jars before start
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 21 Jul 2015 13:26:12 +0300
+
 statbox-kafka (0.8.2.1-10) trusty; urgency=medium
 
   * Don't override HighWaterMarks on bad metadata
