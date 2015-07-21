@@ -19,8 +19,8 @@ for file in /usr/lib/kafka/libs/*.jar;
 do
 	CLASSPATH=$CLASSPATH:$file
 done
-KAFKA_OPTS="-Xmx6144M -server  -Dlog4j.configuration=file:/etc/yandex/statbox-kafka/log4j.properties"
-KAFKA_CONF="/etc/yandex/statbox-kafka/server.properties"
+KAFKA_OPTS="-Xmx6144M -server  -Dlog4j.configuration=file:/etc/yandex/kafka/log4j.properties"
+KAFKA_CONF="/etc/yandex/kafka/server.properties"
 
 export LC_ALL=C
 export LANG=C
