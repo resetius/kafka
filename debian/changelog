@@ -1,3 +1,10 @@
+statbox-kafka (0.8.2.1-13) trusty; urgency=medium
+
+  * testNotEnoughReplicasAfterBrokerShutdown: fix exception type
+  * kafka-2169; Upgrade to zkclient-0.5; patched by Parth Brahmbhatt; reviewed by Jun Rao
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 24 Jul 2015 14:49:02 +0300
+
 statbox-kafka (0.8.2.1-12) trusty; urgency=medium
 
   * [LOGBROKER-950] save highwatermark in separate files* 
