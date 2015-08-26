@@ -88,7 +88,8 @@ class Log(var dir: File,
   }
 
   private val hwmFile = new File(dir.getAbsolutePath + "/highwatermark.bin")
-  private val hwmChannel = FileMessageSet.openChannel(hwmFile, mutable = true)
+  private var hwmChannel = FileMessageSet.openChannel(hwmFile, mutable = true)
+  private val hwmChannelLock = new Object
 
   def writeHighWatermark(offset: Long): Unit = {
     try {
@@ -96,8 +97,11 @@ class Log(var dir: File,
       buffer.putInt(0)
       buffer.putLong(offset)
       buffer.rewind()
-      hwmChannel.position(0)
-      hwmChannel.write(buffer)
+
+      hwmChannelLock synchronized {
+        hwmChannel.position(0)
+        hwmChannel.write(buffer)
+      }
     } catch {
       case e: IOException => throw new KafkaStorageException("I/O exception in write highwatermark to '%s'".format(hwmFile.getAbsolutePath), e)
     }
@@ -105,8 +109,11 @@ class Log(var dir: File,
 
   def readHighWatermark(): Long = {
     val buffer = ByteBuffer.allocate(4+8)
-    hwmChannel.position(0)
-    hwmChannel.read(buffer)
+
+    hwmChannelLock synchronized {
+      hwmChannel.position(0)
+      hwmChannel.read(buffer)
+    }
 
     if (buffer.remaining() > 4) {
       val version = buffer.getInt
@@ -595,6 +602,7 @@ class Log(var dir: File,
     val newdir = new File(basedir + "/" + dir.getName)
 
     val old = new File(dir.getAbsolutePath)
+    val oldHwmFile = hwmFile
 
     warn("moving %s -> %s".format(dir.getAbsolutePath, newdir.getAbsoluteFile))
 
@@ -616,6 +624,16 @@ class Log(var dir: File,
     }
 
     if (moving) {
+      // LOGBROKER-1075
+      val oldHwmChannel = hwmChannel
+      val newHwmChannel = FileMessageSet.openChannel(hwmFile, mutable = true)
+      hwmChannelLock synchronized {
+        newHwmChannel.transferFrom(oldHwmChannel, 0, oldHwmChannel.size())
+        hwmChannel = newHwmChannel
+        oldHwmChannel.close()
+      }
+      oldHwmFile.delete()
+      
       for (segment <- segments) {
         val segmentFile = segment.log.file.getName
         val indexFile   = segment.index.file.getName
