@@ -577,7 +577,7 @@ object TestUtils extends Logging {
 
   def createBrokersInZk(zkUtils: ZkUtils, ids: Seq[Int]): Seq[Broker] = {
     val brokers = ids.map(id => new Broker(id, "localhost", 6667, SecurityProtocol.PLAINTEXT))
-    brokers.foreach(b => zkUtils.registerBrokerInZk(b.id, "localhost", 6667, b.endPoints, jmxPort = -1))
+    brokers.foreach(b => zkUtils.registerBrokerInZk(b.id, "", "localhost", 6667, b.endPoints, jmxPort = -1))
     brokers
   }
 
