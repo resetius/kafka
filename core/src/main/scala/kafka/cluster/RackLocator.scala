@@ -20,7 +20,7 @@ package kafka.cluster
 import java.util.Properties
 
 import kafka.server.KafkaConfig
-import kafka.utils.Utils
+import kafka.utils.{Json, Utils, ZkUtils}
 import org.I0Itec.zkclient.ZkClient
 
 import scala.collection.Map
@@ -46,8 +46,22 @@ class NoRack(zkClient: ZkClient, props: Properties) extends RackLocator(zkClient
 }
 
 class ZkRackLocator(zkClient: ZkClient, props: Properties) extends RackLocator(zkClient, props) {
+
+  def getBrokerRack(brokerId: Int): String = {
+    val infoString = ZkUtils.readDataMaybeNull(zkClient, ZkUtils.BrokerIdsPath + "/" + brokerId)._1
+    infoString.map(Json.parseFull) match {
+      case Some(m) => {
+        val brokerInfo = m.asInstanceOf[Map[String, Any]]
+        val rack = brokerInfo.get("rackId").map(_.asInstanceOf[String]).getOrElse("")
+        rack
+      }
+      case None => ""
+    }
+  }
+
   override def getRackInfo(): Map[Int, String] = {
-    ???
+    val brokers = ZkUtils.getSortedBrokerList(zkClient)
+    brokers.map(id => id -> getBrokerRack(id)).toMap
   }
 }
 
