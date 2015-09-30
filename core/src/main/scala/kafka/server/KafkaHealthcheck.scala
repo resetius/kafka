@@ -34,6 +34,7 @@ import java.net.InetAddress
 class KafkaHealthcheck(private val brokerId: Int, 
                        private val advertisedHost: String, 
                        private val advertisedPort: Int,
+                       private val rackId: String,
                        private val zkSessionTimeoutMs: Int,
                        private val zkClient: ZkClient) extends Logging {
 
@@ -55,7 +56,7 @@ class KafkaHealthcheck(private val brokerId: Int,
       else
         advertisedHost
     val jmxPort = System.getProperty("com.sun.management.jmxremote.port", "-1").toInt
-    ZkUtils.registerBrokerInZk(zkClient, brokerId, advertisedHostName, advertisedPort, zkSessionTimeoutMs, jmxPort)
+    ZkUtils.registerBrokerInZk(zkClient, brokerId, advertisedHostName, rackId, advertisedPort, zkSessionTimeoutMs, jmxPort)
   }
 
   /**
