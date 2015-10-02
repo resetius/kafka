@@ -22,6 +22,11 @@ import kafka.message.{MessageSet, Message}
 import kafka.consumer.ConsumerConfig
 import kafka.utils.{VerifiableProperties, ZKConfig, Utils}
 
+object Defaults {
+  val RackLocatorClass = "kafka.cluster.NoRack"
+  val RackLocatorProperties = ""
+}
+
 /**
  * Configuration settings for the kafka server
  */
@@ -73,6 +78,13 @@ class KafkaConfig private (val props: VerifiableProperties) extends ZKConfig(pro
 
   /* the broker id for this server */
   val brokerId: Int = props.getIntInRange("broker.id", (0, Int.MaxValue))
+
+  /* the rack id for this server */
+  val rackId: String = props.getString("broker.rackid", "")
+
+  val rackLocator: String = props.getString("rack.locator.class", Defaults.RackLocatorClass)
+
+  val rackLocatorProps: String = props.getString("rack.locator.properties", Defaults.RackLocatorProperties)
 
   /* the maximum size of message that the server can receive */
   val messageMaxBytes = props.getIntInRange("message.max.bytes", 1000000 + MessageSet.LogOverhead, (0, Int.MaxValue))
