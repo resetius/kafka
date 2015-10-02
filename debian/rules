@@ -5,7 +5,7 @@ GRADLE_PARAMS += -PmavenUrl=http://artifactory.yandex.net/artifactory/yandex_sta
 GRADLE_PARAMS += -PmavenUsername=yandexstatboxdeploy
 GRADLE_PARAMS += -PmavenPassword=yandexstatboxdeploy
 
-GRADLE_PARAMS += -Psigning.keyId=statbox-qa@yandex-team.ru
+GRADLE_PARAMS += -Psigning.keyId=28149F9A
 GRADLE_PARAMS += -Psigning.password=password
 GRADLE_PARAMS += -Psigning.secretKeyRingFile=/home/jenkins/.gnupg/secring.gpg
 
