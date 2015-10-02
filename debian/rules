@@ -5,8 +5,8 @@
 
 override_dh_auto_build:
 	gradle
-	./gradlew -PscalaVersion=2.10.4 clean releaseTarGz
-	tar xf ./core/build/distributions/kafka_2.10-0.8.2.1.tgz
+	./gradlew -PscalaVersion=2.11.7 clean releaseTarGz
+	tar xf ./core/build/distributions/kafka_2.11-0.8.2.3.tgz
 
 override_dh_installinit:
 	dh_installinit --name=statbox-kafka --noscripts 
