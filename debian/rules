@@ -1,13 +1,13 @@
 #! /usr/bin/make -f
 
-GRADLE_PARAMS := " -PscalaVersion=2.11.7"
-GRADLE_PARAMS += " -PmavenUrl=http://artifactory.yandex.net/artifactory/yandex_statbox_releases/"
-GRADLE_PARAMS += " -PmavenUsername=yandexstatboxdeploy"
-GRADLE_PARAMS += " -PmavenPassword=yandexstatboxdeploy"
+GRADLE_PARAMS := -PscalaVersion=2.11.7
+GRADLE_PARAMS += -PmavenUrl=http://artifactory.yandex.net/artifactory/yandex_statbox_releases/
+GRADLE_PARAMS += -PmavenUsername=yandexstatboxdeploy
+GRADLE_PARAMS += -PmavenPassword=yandexstatboxdeploy
 
-GRADLE_PARAMS += " -Psigning.keyId=statbox-qa@yandex-team.ru"
-GRADLE_PARAMS += " -Psigning.password=password"
-GRADLE_PARAMS += " -Psigning.secretKeyRingFile=/home/jenkins/.gnupg/secring.gpg"
+GRADLE_PARAMS += -Psigning.keyId=statbox-qa@yandex-team.ru
+GRADLE_PARAMS += -Psigning.password=password
+GRADLE_PARAMS += -Psigning.secretKeyRingFile=/home/jenkins/.gnupg/secring.gpg
 
 %:
 	dh $@
