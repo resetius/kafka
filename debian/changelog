@@ -1,3 +1,5 @@
+  * [LOGBROKER-231] Fix zk rack locator
+
 statbox-kafka (0.8.2.3-1) trusty; urgency=medium
 
   * [LOGBROKER-231] Kafka rack aware support
