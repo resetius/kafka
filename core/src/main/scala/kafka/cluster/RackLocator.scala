@@ -49,8 +49,8 @@ class ZkRackLocator(zkClient: ZkClient, props: Properties) extends RackLocator(z
 
   def getBrokerRack(brokerId: Int): String = {
     val infoString = ZkUtils.readDataMaybeNull(zkClient, ZkUtils.BrokerIdsPath + "/" + brokerId)._1
-    infoString.map(Json.parseFull) match {
-      case Some(Some(m)) => {
+    infoString.flatMap(Json.parseFull) match {
+      case Some(m) => {
         val brokerInfo = m.asInstanceOf[Map[String, Any]]
         val rack = brokerInfo.get("rackId").map(_.asInstanceOf[String]).getOrElse("")
         rack
