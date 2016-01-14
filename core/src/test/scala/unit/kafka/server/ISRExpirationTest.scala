@@ -173,6 +173,7 @@ class IsrExpirationTest {
 
   private def getLogWithLogEndOffset(logEndOffset: Long, expectedCalls: Int): Log = {
     val log1 = EasyMock.createMock(classOf[kafka.log.Log])
+    EasyMock.expect(log1.readHighWatermark).andReturn(0L).times(1)
     EasyMock.expect(log1.logEndOffsetMetadata).andReturn(new LogOffsetMetadata(logEndOffset)).times(expectedCalls)
     EasyMock.replay(log1)
 
