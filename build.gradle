@@ -72,6 +72,7 @@ if (new File('.git').exists()) {
     excludes.addAll([
         '**/.git/**',
         '**/build/**',
+        '**/debian/**',
         'CONTRIBUTING.md',
         'gradlew',
         'gradlew.bat',
