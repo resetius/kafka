@@ -1,2 +1,2 @@
-kafka_2.11-0.9.0.1-SNAPSHOT/* /usr/lib/kafka
+kafka_2.11-0.9.0.1/* /usr/lib/kafka
 etc/* etc
