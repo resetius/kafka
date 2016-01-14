@@ -1,0 +1,14 @@
+Source: statbox-kafka
+Section: misc
+Priority: optional
+Maintainer: Alexey Ozeritsky <aozeritsky@yandex-team.ru>
+Vcs-Browser: https://github.yandex-team.ru/statbox/kafka
+Vcs-Git: https://github.yandex-team.ru/statbox/kafka.git
+Build-Depends: debhelper (>=9), java7-jdk, gradle
+Standards-Version: 3.9.3
+
+Package: statbox-kafka
+Architecture: all
+Depends: java7-runtime
+Description: Statbox Kafka
+ Apache Kafka with Statbox patches

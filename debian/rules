@@ -1,0 +1,21 @@
+#! /usr/bin/make -f
+
+GRADLE_PARAMS := -PscalaVersion=2.11.7
+GRADLE_PARAMS += -PmavenUrl=http://artifactory.yandex.net/artifactory/yandex_statbox_releases/
+GRADLE_PARAMS += -PmavenUsername=yandexstatboxdeploy
+GRADLE_PARAMS += -PmavenPassword=yandexstatboxdeploy
+
+GRADLE_PARAMS += -Psigning.keyId=28149F9A
+GRADLE_PARAMS += -Psigning.password=password
+GRADLE_PARAMS += -Psigning.secretKeyRingFile=/home/jenkins/.gnupg/secring.gpg
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	gradle
+	./gradlew $(GRADLE_PARAMS) clean releaseTarGz uploadArchives
+	tar xf ./core/build/distributions/kafka_2.11-0.9.0.1-SNAPSHOT.tgz
+
+override_dh_installinit:
+	dh_installinit --name=statbox-kafka --noscripts 
