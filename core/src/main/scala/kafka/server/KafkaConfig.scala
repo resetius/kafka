@@ -44,11 +44,15 @@ object Defaults {
   /** ********* General Configuration ***********/
   val MaxReservedBrokerId = 1000
   val BrokerId = -1
+  val RackId = ""
   val MessageMaxBytes = 1000000 + MessageSet.LogOverhead
   val NumNetworkThreads = 3
   val NumIoThreads = 8
   val BackgroundThreads = 10
   val QueuedMaxRequests = 500
+
+  val RackLocatorClass = "kafka.cluster.NoRack"
+  val RackLocatorProperties = ""
 
   /************* Authorizer Configuration ***********/
   val AuthorizerClassName = ""
@@ -192,12 +196,16 @@ object KafkaConfig {
   /** ********* General Configuration ***********/
   val MaxReservedBrokerIdProp = "reserved.broker.max.id"
   val BrokerIdProp = "broker.id"
+  val BrokerRackIdProp = "broker.rackid"
   val MessageMaxBytesProp = "message.max.bytes"
   val NumNetworkThreadsProp = "num.network.threads"
   val NumIoThreadsProp = "num.io.threads"
   val BackgroundThreadsProp = "background.threads"
   val QueuedMaxRequestsProp = "queued.max.requests"
   val RequestTimeoutMsProp = CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG
+
+  val RackLocatorProp = "rack.locator.class"
+  val RackLocatorPropsProp = "rack.locator.properties"
   /************* Authorizer Configuration ***********/
   val AuthorizerClassNameProp = "authorizer.class.name"
   /** ********* Socket Server Configuration ***********/
@@ -342,6 +350,7 @@ object KafkaConfig {
   val BrokerIdDoc = "The broker id for this server. " +
   "To avoid conflicts between zookeeper generated brokerId and user's config.brokerId " +
   "added MaxReservedBrokerId and zookeeper sequence starts from MaxReservedBrokerId + 1."
+  val RackIdDoc = "The broker rack id"
   val MessageMaxBytesDoc = "The maximum size of message that the server can receive"
   val NumNetworkThreadsDoc = "the number of network threads that the server uses for handling network requests"
   val NumIoThreadsDoc = "The number of io threads that the server uses for carrying out network requests"
@@ -532,12 +541,15 @@ object KafkaConfig {
       /** ********* General Configuration ***********/
       .define(MaxReservedBrokerIdProp, INT, Defaults.MaxReservedBrokerId, atLeast(0), MEDIUM, MaxReservedBrokerIdDoc)
       .define(BrokerIdProp, INT, Defaults.BrokerId, HIGH, BrokerIdDoc)
+      .define(BrokerRackIdProp, STRING, Defaults.RackId, HIGH, BrokerRackIdProp)
       .define(MessageMaxBytesProp, INT, Defaults.MessageMaxBytes, atLeast(0), HIGH, MessageMaxBytesDoc)
       .define(NumNetworkThreadsProp, INT, Defaults.NumNetworkThreads, atLeast(1), HIGH, NumNetworkThreadsDoc)
       .define(NumIoThreadsProp, INT, Defaults.NumIoThreads, atLeast(1), HIGH, NumIoThreadsDoc)
       .define(BackgroundThreadsProp, INT, Defaults.BackgroundThreads, atLeast(1), HIGH, BackgroundThreadsDoc)
       .define(QueuedMaxRequestsProp, INT, Defaults.QueuedMaxRequests, atLeast(1), HIGH, QueuedMaxRequestsDoc)
       .define(RequestTimeoutMsProp, INT, Defaults.RequestTimeoutMs, HIGH, RequestTimeoutMsDoc)
+      .define(RackLocatorProp, STRING, Defaults.RackLocatorClass, MEDIUM, "")
+      .define(RackLocatorPropsProp, STRING, Defaults.RackLocatorProperties, MEDIUM, "")
 
       /************* Authorizer Configuration ***********/
       .define(AuthorizerClassNameProp, STRING, Defaults.AuthorizerClassName, LOW, AuthorizerClassNameDoc)
@@ -733,12 +745,17 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
   /** ********* General Configuration ***********/
   val maxReservedBrokerId: Int = getInt(KafkaConfig.MaxReservedBrokerIdProp)
   var brokerId: Int = getInt(KafkaConfig.BrokerIdProp)
+  val rackId: String = getString(KafkaConfig.BrokerRackIdProp)
   val numNetworkThreads = getInt(KafkaConfig.NumNetworkThreadsProp)
   val backgroundThreads = getInt(KafkaConfig.BackgroundThreadsProp)
   val queuedMaxRequests = getInt(KafkaConfig.QueuedMaxRequestsProp)
   val numIoThreads = getInt(KafkaConfig.NumIoThreadsProp)
   val messageMaxBytes = getInt(KafkaConfig.MessageMaxBytesProp)
   val requestTimeoutMs = getInt(KafkaConfig.RequestTimeoutMsProp)
+
+  val rackLocator = getString(KafkaConfig.RackLocatorProp)
+  val rackLocatorProps = getString(KafkaConfig.RackLocatorPropsProp)
+
 
   /************* Authorizer Configuration ***********/
   val authorizerClassName: String = getString(KafkaConfig.AuthorizerClassNameProp)

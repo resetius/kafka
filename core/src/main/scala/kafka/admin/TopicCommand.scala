@@ -102,7 +102,9 @@ object TopicCommand extends Logging {
       val partitions = opts.options.valueOf(opts.partitionsOpt).intValue
       val replicas = opts.options.valueOf(opts.replicationFactorOpt).intValue
       warnOnMaxMessagesChange(configs, replicas)
-      AdminUtils.createTopic(zkUtils, topic, partitions, replicas, configs)
+      val brokerRackMapping = opts.getBrokerRackMap(zkUtils)
+      AdminUtils.createTopic(zkUtils, topic, partitions, replicas, configs, rackInfo = brokerRackMapping)
+
     }
     println("Created topic \"%s\".".format(topic))
   }
@@ -136,7 +138,9 @@ object TopicCommand extends Logging {
           "logic or ordering of the messages will be affected")
         val nPartitions = opts.options.valueOf(opts.partitionsOpt).intValue
         val replicaAssignmentStr = opts.options.valueOf(opts.replicaAssignmentOpt)
-        AdminUtils.addPartitions(zkUtils, topic, nPartitions, replicaAssignmentStr)
+
+        val brokerRackMapping = opts.getBrokerRackMap(zkUtils)
+        AdminUtils.addPartitions(zkUtils, topic, nPartitions, replicaAssignmentStr, rackInfo = brokerRackMapping)
         println("Adding partitions succeeded!")
       }
     }
@@ -258,8 +262,7 @@ object TopicCommand extends Logging {
     ret.toMap
   }
 
-  class TopicCommandOptions(args: Array[String]) {
-    val parser = new OptionParser
+  class TopicCommandOptions(args: Array[String]) extends RackLocatorCommandOptions {
     val zkConnectOpt = parser.accepts("zookeeper", "REQUIRED: The connection string for the zookeeper connection in the form host:port. " +
                                       "Multiple URLS can be given to allow fail-over.")
                            .withRequiredArg

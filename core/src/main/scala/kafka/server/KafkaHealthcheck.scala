@@ -34,6 +34,7 @@ import java.net.InetAddress
  * we are dead.
  */
 class KafkaHealthcheck(private val brokerId: Int,
+                       private val rackId: String,
                        private val advertisedEndpoints: Map[SecurityProtocol, EndPoint],
                        private val zkUtils: ZkUtils) extends Logging {
 
@@ -61,7 +62,7 @@ class KafkaHealthcheck(private val brokerId: Int,
     // only PLAINTEXT is supported as default
     // if the broker doesn't listen on PLAINTEXT protocol, an empty endpoint will be registered and older clients will be unable to connect
     val plaintextEndpoint = updatedEndpoints.getOrElse(SecurityProtocol.PLAINTEXT, new EndPoint(null,-1,null))
-    zkUtils.registerBrokerInZk(brokerId, plaintextEndpoint.host, plaintextEndpoint.port, updatedEndpoints, jmxPort)
+    zkUtils.registerBrokerInZk(brokerId, rackId, plaintextEndpoint.host, plaintextEndpoint.port, updatedEndpoints, jmxPort)
   }
 
   /**

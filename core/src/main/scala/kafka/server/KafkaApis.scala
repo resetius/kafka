@@ -23,6 +23,7 @@ import java.util
 import kafka.admin.AdminUtils
 import kafka.api._
 import kafka.cluster.Partition
+import kafka.cluster.RackLocator
 import kafka.common._
 import kafka.controller.KafkaController
 import kafka.coordinator.{GroupCoordinator, JoinGroupResult}
@@ -56,6 +57,7 @@ class KafkaApis(val requestChannel: RequestChannel,
   this.logIdent = "[KafkaApi-%d] ".format(brokerId)
   // Store all the quota managers for each type of request
   val quotaManagers: Map[Short, ClientQuotaManager] = instantiateQuotaManagers(config)
+  val rackLocator = RackLocator.create(zkUtils.zkClient, config)
 
   /**
    * Top-level method that handles all requests and multiplexes to the right api
@@ -550,6 +552,8 @@ class KafkaApis(val requestChannel: RequestChannel,
 
   private def getTopicMetadata(topics: Set[String], securityProtocol: SecurityProtocol): Seq[TopicMetadata] = {
     val topicResponses = metadataCache.getTopicMetadata(topics, securityProtocol)
+    val brokerRackMap = rackLocator.getRackInfo()
+
     if (topics.size > 0 && topicResponses.size != topics.size) {
       val nonExistentTopics = topics -- topicResponses.map(_.topic).toSet
       val responsesForNonExistentTopics = nonExistentTopics.map { topic =>
@@ -564,12 +568,14 @@ class KafkaApis(val requestChannel: RequestChannel,
                   config.offsetsTopicReplicationFactor.toInt
               AdminUtils.createTopic(zkUtils, topic, config.offsetsTopicPartitions,
                                      offsetsTopicReplicationFactor,
-                                     coordinator.offsetsTopicConfigs)
+                                     coordinator.offsetsTopicConfigs,
+                                     rackInfo = brokerRackMap)
               info("Auto creation of topic %s with %d partitions and replication factor %d is successful!"
                 .format(topic, config.offsetsTopicPartitions, offsetsTopicReplicationFactor))
             }
             else {
-              AdminUtils.createTopic(zkUtils, topic, config.numPartitions, config.defaultReplicationFactor)
+              AdminUtils.createTopic(zkUtils, topic, config.numPartitions, config.defaultReplicationFactor,
+                                     rackInfo = brokerRackMap)
               info("Auto creation of topic %s with %d partitions and replication factor %d is successful!"
                    .format(topic, config.numPartitions, config.defaultReplicationFactor))
             }

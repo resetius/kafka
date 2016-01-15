@@ -62,40 +62,167 @@ object AdminUtils extends Logging {
    * p8        p9        p5        p6        p7       (2nd replica)
    * p3        p4        p0        p1        p2       (3nd replica)
    * p7        p8        p9        p5        p6       (3nd replica)
+   *
+   * To create rack aware assignment, this API will first create an rack interlaced broker list. For example,
+   * from this brokerID -> rack mapping:
+   *
+   * 0 -> "rack1", 1 -> "rack3", 2 -> "rack3", 3 -> "rack2", 4 -> "rack2", 5 -> "rack1"
+   *
+   * The rack interlaced list will be
+   *
+   * 0, 3, 1, 5, 4, 2
+   *
+   * Then an easy round-robin assignment can be applied. Assume 6 partitions with replication factor of 3, the assignment
+   * will be
+   *
+   * 0 -> 0,3,1
+   * 1 -> 3,1,5
+   * 2 -> 1,5,4
+   * 3 -> 5,4,2
+   * 4 -> 4,2,0
+   * 5 -> 2,0,3
+   *
+   * Once it has completed the first round-robin, if there are more partitions to assign, the algorithm will start to
+   * have a shift for the followers. This is to ensure we will not always get the same set of sequence.
+   * In this case, if there is another partition to assign (partition #6), the assignment will be
+   *
+   * 6 -> 0,4,2 (instead of repeating 0,3,1 as partition 0)
+   *
+   * The rack aware assignment always chooses leader of the partition using round robin on the rack interlaced broker list.
+   * When choosing followers, it will be biased towards brokers on racks that do not have
+   * any replica assignment, until every rack has a replica. Then the follower assignment will go back to round-robin on
+   * the broker list.
+   *
+   * As the result, if the number of replicas is equal to or greater than the number of racks, it will ensure that
+   * each rack will get at least one replica. Otherwise, each rack will get
+   * at most one replica. In the perfect situation where number of replica is the same as number of racks and each rack
+   * has the same number of brokers, it guarantees that replica distribution is even across brokers and racks.
+   *
+   * @param rackInfo Map from broker ID to its rack (zone). If empty, no rack aware
+   *                 assignment will be used.
+   * @throws AdminOperationException If rack information is supplied but is incomplete, of if
+   *                                 there is not possible to assign each replica to a unique rack
+   *
    */
   def assignReplicasToBrokers(brokerList: Seq[Int],
                               nPartitions: Int,
                               replicationFactor: Int,
                               fixedStartIndex: Int = -1,
-                              startPartitionId: Int = -1)
+                              startPartitionId: Int = -1,
+                              rackInfo: Map[Int, String] = Map())
   : Map[Int, Seq[Int]] = {
+    val subRackInfo = rackInfo.filterKeys(brokerList.contains(_))
+    if (rackInfo.size > 0 && subRackInfo.size != brokerList.size) {
+      throw new AdminOperationException("Incomplete broker-rack mapping supplied for broker list " + brokerList)
+    }
+    val numRacks = subRackInfo.values.toSet.size
+    val useRackAware = numRacks > 0
+    val arrangedBrokerList = if (useRackAware) interlaceBrokersByRack(subRackInfo) else brokerList
     if (nPartitions <= 0)
       throw new AdminOperationException("number of partitions must be larger than 0")
     if (replicationFactor <= 0)
       throw new AdminOperationException("replication factor must be larger than 0")
-    if (replicationFactor > brokerList.size)
+    if (replicationFactor > arrangedBrokerList.size)
       throw new AdminOperationException("replication factor: " + replicationFactor +
-        " larger than available brokers: " + brokerList.size)
+        " larger than available brokers: " + arrangedBrokerList.size)
     val ret = new mutable.HashMap[Int, List[Int]]()
-    val startIndex = if (fixedStartIndex >= 0) fixedStartIndex else rand.nextInt(brokerList.size)
+    val startIndex = if (fixedStartIndex >= 0) fixedStartIndex else rand.nextInt(arrangedBrokerList.size)
     var currentPartitionId = if (startPartitionId >= 0) startPartitionId else 0
 
-    var nextReplicaShift = if (fixedStartIndex >= 0) fixedStartIndex else rand.nextInt(brokerList.size)
+    var nextReplicaShift = if (fixedStartIndex >= 0) fixedStartIndex else rand.nextInt(arrangedBrokerList.size)
     for (i <- 0 until nPartitions) {
-      if (currentPartitionId > 0 && (currentPartitionId % brokerList.size == 0))
+      if (currentPartitionId > 0 && (currentPartitionId % arrangedBrokerList.size == 0))
         nextReplicaShift += 1
-      val firstReplicaIndex = (currentPartitionId + startIndex) % brokerList.size
-      var replicaList = List(brokerList(firstReplicaIndex))
-      for (j <- 0 until replicationFactor - 1)
-        replicaList ::= brokerList(replicaIndex(firstReplicaIndex, nextReplicaShift, j, brokerList.size))
-      ret.put(currentPartitionId, replicaList.reverse)
+      val firstReplicaIndex = (currentPartitionId + startIndex) % arrangedBrokerList.size
+      val leader = arrangedBrokerList(firstReplicaIndex)
+      val replicaList = if (!useRackAware)
+        getReplicaList(arrangedBrokerList, leader, replicationFactor, firstReplicaIndex, nextReplicaShift)
+      else
+        getReplicaListWithRackAwareAssignment(arrangedBrokerList, leader, replicationFactor, numRacks,
+          firstReplicaIndex, nextReplicaShift, rackInfo)
+      ret.put(currentPartitionId, replicaList)
       currentPartitionId = currentPartitionId + 1
     }
     ret.toMap
   }
 
+  private def getReplicaList(brokerList: Seq[Int],
+                             leader: Int,
+                             replicationFactor: Int,
+                             firstReplicaIndex: Int,
+                             nextReplicaShift: Int): List[Int] = {
+    var replicaList = List(leader)
+    for (j <- 0 until replicationFactor - 1)
+      replicaList ::= brokerList(replicaIndex(firstReplicaIndex, nextReplicaShift, j, brokerList.size))
+    replicaList.reverse
+  }
 
- /**
+  private def getReplicaListWithRackAwareAssignment(brokerList: Seq[Int],
+                                                    leader: Int,
+                                                    replicationFactor: Int,
+                                                    numRacks: Int,
+                                                    firstReplicaIndex: Int,
+                                                    nextReplicaShift: Int,
+                                                    rackInfo: Map[Int, String]): List[Int] = {
+    var replicaList = List(leader)
+    val racksWithReplicas: mutable.Set[String] = mutable.Set(rackInfo(leader))
+    var k = 0
+    for (j <- 0 until replicationFactor - 1) {
+      var done = false
+      while (!done) {
+        val broker = brokerList(replicaIndex(firstReplicaIndex, nextReplicaShift * numRacks, k, brokerList.size))
+        val rack = rackInfo(broker)
+        // unless every rack has a replica, try to find the broker on the rack without any replica assigned
+        if (!racksWithReplicas.contains(rack) || racksWithReplicas.size == numRacks) {
+          replicaList ::= broker
+          racksWithReplicas += rack
+          done = true
+        }
+        k = k + 1
+      }
+    }
+    replicaList.reverse
+  }
+
+  /**
+   * Given broker and rack information, returns a list of brokers interlaced by the rack. Assume
+   * this is the rack and its brokers:
+   *
+   * rack1: 0, 1, 2
+   * rack2: 3, 4, 5
+   * rack3: 6, 7, 8
+   *
+   * This API would return the list of 0, 3, 6, 1, 4, 7, 2, 5, 8
+   *
+   * This is essential to make sure the assignReplicasToBrokers API can use such list
+   * and assign replicas to brokers in a simple round-robin fashion, but still keep
+   * the even distribution of leader count and replica count on each broker, while
+   * making sure replicas are distributed to all racks.
+   */
+  private[admin] def interlaceBrokersByRack(brokerRackMap: Map[Int, String]): Seq[Int] = {
+    val reverseMap = getInverseMap(brokerRackMap)
+    val brokerListsByRack = reverseMap.map { case(rack, list) => (rack, reverseMap(rack).toIterator) }
+    val racks = brokerListsByRack.keys.toArray.sorted
+    var result: List[Int] = List()
+    var rackIndex = 0
+    while (result.size < brokerRackMap.size) {
+      val rackIterator = brokerListsByRack(racks(rackIndex))
+      if (rackIterator.hasNext) {
+        result ::= rackIterator.next()
+      }
+      rackIndex = (rackIndex + 1) % racks.size
+    }
+    result.reverse
+  }
+
+  private[admin] def getInverseMap(brokerRackMap: Map[Int, String]): Map[String, List[Int]] = {
+    brokerRackMap.toList.map { case(k, v) => (v, k) }
+      .groupBy(_._1)
+      .map { case(k, v) => (k, v.map(_._2))}
+  }
+
+
+  /**
   * Add partitions to existing topic with optional replica assignment
   *
   * @param zkUtils Zookeeper utilities
@@ -103,12 +230,15 @@ object AdminUtils extends Logging {
   * @param numPartitions Number of partitions to be set
   * @param replicaAssignmentStr Manual replica assignment
   * @param checkBrokerAvailable Ignore checking if assigned replica broker is available. Only used for testing
+  * @param rackInfo Map from broker ID to its rack (zone). If empty, no rack aware
+  *                 assignment will be used.
   */
   def addPartitions(zkUtils: ZkUtils,
                     topic: String,
                     numPartitions: Int = 1,
                     replicaAssignmentStr: String = "",
-                    checkBrokerAvailable: Boolean = true) {
+                    checkBrokerAvailable: Boolean = true,
+                    rackInfo: Map[Int, String] = Map.empty) {
     val existingPartitionsReplicaList = zkUtils.getReplicaAssignmentForTopics(List(topic))
     if (existingPartitionsReplicaList.size == 0)
       throw new AdminOperationException("The topic %s does not exist".format(topic))
@@ -121,7 +251,8 @@ object AdminUtils extends Logging {
     // create the new partition replication list
     val brokerList = zkUtils.getSortedBrokerList()
     val newPartitionReplicaList = if (replicaAssignmentStr == null || replicaAssignmentStr == "")
-      AdminUtils.assignReplicasToBrokers(brokerList, partitionsToAdd, existingReplicaList.size, existingReplicaList.head, existingPartitionsReplicaList.size)
+      AdminUtils.assignReplicasToBrokers(brokerList, partitionsToAdd, existingReplicaList.size, existingReplicaList.head,
+        existingPartitionsReplicaList.size, rackInfo = rackInfo)
     else
       getManualReplicaAssignment(replicaAssignmentStr, brokerList.toSet, existingPartitionsReplicaList.size, checkBrokerAvailable)
 
@@ -230,10 +361,11 @@ object AdminUtils extends Logging {
   def createTopic(zkUtils: ZkUtils,
                   topic: String,
                   partitions: Int, 
-                  replicationFactor: Int, 
-                  topicConfig: Properties = new Properties) {
+                  replicationFactor: Int,
+                  topicConfig: Properties = new Properties,
+                  rackInfo: Map[Int, String] = Map.empty) {
     val brokerList = zkUtils.getSortedBrokerList()
-    val replicaAssignment = AdminUtils.assignReplicasToBrokers(brokerList, partitions, replicationFactor)
+    val replicaAssignment = AdminUtils.assignReplicasToBrokers(brokerList, partitions, replicationFactor, rackInfo = rackInfo)
     AdminUtils.createOrUpdateTopicPartitionAssignmentPathInZK(zkUtils, topic, replicaAssignment, topicConfig)
   }
 
