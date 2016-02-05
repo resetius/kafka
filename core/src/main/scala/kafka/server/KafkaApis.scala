@@ -552,13 +552,12 @@ class KafkaApis(val requestChannel: RequestChannel,
 
   private def getTopicMetadata(topics: Set[String], securityProtocol: SecurityProtocol): Seq[TopicMetadata] = {
     val topicResponses = metadataCache.getTopicMetadata(topics, securityProtocol)
-    val brokerRackMap = rackLocator.getRackInfo()
-
     if (topics.size > 0 && topicResponses.size != topics.size) {
       val nonExistentTopics = topics -- topicResponses.map(_.topic).toSet
       val responsesForNonExistentTopics = nonExistentTopics.map { topic =>
         if (topic == GroupCoordinator.GroupMetadataTopicName || config.autoCreateTopicsEnable) {
           try {
+            val brokerRackMap = rackLocator.getRackInfo()
             if (topic == GroupCoordinator.GroupMetadataTopicName) {
               val aliveBrokers = metadataCache.getAliveBrokers
               val offsetsTopicReplicationFactor =
