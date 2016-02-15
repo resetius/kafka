@@ -139,7 +139,7 @@ class LogManager(val logDirs: Array[File],
 
       val jobsForDir = for {
         dirContent <- Option(dir.listFiles).toList
-        logDir <- dirContent if logDir.isDirectory
+        logDir <- dirContent if logDir.isDirectory && logDir.getName != Log.LostAndFound
       } yield {
         CoreUtils.runnable {
         if (logDir.list().isEmpty) {
@@ -280,7 +280,7 @@ class LogManager(val logDirs: Array[File],
    *
    * @param partitionAndOffsets Partition logs that need to be truncated
    */
-  def truncateTo(partitionAndOffsets: Map[TopicAndPartition, Long]) {
+  def truncateTo(partitionAndOffsets: Map[TopicAndPartition, Long], save: Boolean = false) {
     for ((topicAndPartition, truncateOffset) <- partitionAndOffsets) {
       val log = logs.get(topicAndPartition)
       // If the log does not exist, skip it
@@ -289,7 +289,7 @@ class LogManager(val logDirs: Array[File],
         val needToStopCleaner: Boolean = (truncateOffset < log.activeSegment.baseOffset)
         if (needToStopCleaner && cleaner != null)
           cleaner.abortAndPauseCleaning(topicAndPartition)
-        log.truncateTo(truncateOffset)
+        log.truncateTo(truncateOffset, save)
         if (needToStopCleaner && cleaner != null)
           cleaner.resumeCleaning(topicAndPartition)
       }

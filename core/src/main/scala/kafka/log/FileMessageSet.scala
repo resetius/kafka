@@ -268,11 +268,14 @@ class FileMessageSet private[kafka](@volatile var file: File,
    * @param targetSize The size to truncate to.
    * @return The number of bytes truncated off
    */
-  def truncateTo(targetSize: Int): Int = {
+  def truncateTo(targetSize: Int, saveTo: WritableByteChannel = null): Int = {
     val originalSize = sizeInBytes
     if(targetSize > originalSize || targetSize < 0)
       throw new KafkaException("Attempt to truncate log segment to " + targetSize + " bytes failed, " +
                                " size of this log segment is " + originalSize + " bytes.")
+    if (saveTo != null) {
+      channel.transferTo(targetSize, channel.size(), saveTo)
+    }
     channel.truncate(targetSize)
     channel.position(targetSize)
     _size.set(targetSize)
