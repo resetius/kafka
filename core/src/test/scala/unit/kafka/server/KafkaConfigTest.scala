@@ -383,6 +383,34 @@ class KafkaConfigTest {
   }
 
   @Test
+  def testInvalidInterBrokerSecurityProtocol() {
+    val props = TestUtils.createBrokerConfig(0, TestUtils.MockZkConnect, port = 8181)
+    props.put(KafkaConfig.ListenersProp, "SSL://localhost:0")
+    props.put(KafkaConfig.InterBrokerSecurityProtocolProp, SecurityProtocol.PLAINTEXT.toString)
+    intercept[IllegalArgumentException] {
+      KafkaConfig.fromProps(props)
+    }
+  }
+
+  @Test
+  def testEqualAdvertisedListenersProtocol() {
+    val props = TestUtils.createBrokerConfig(0, TestUtils.MockZkConnect, port = 8181)
+    props.put(KafkaConfig.ListenersProp, "PLAINTEXT://localhost:9092,SSL://localhost:9093")
+    props.put(KafkaConfig.AdvertisedListenersProp, "PLAINTEXT://localhost:9092,SSL://localhost:9093")
+    KafkaConfig.fromProps(props)
+  }
+
+  @Test
+  def testInvalidAdvertisedListenersProtocol() {
+    val props = TestUtils.createBrokerConfig(0, TestUtils.MockZkConnect, port = 8181)
+    props.put(KafkaConfig.ListenersProp, "TRACE://localhost:9091,SSL://localhost:9093")
+    props.put(KafkaConfig.AdvertisedListenersProp, "PLAINTEXT://localhost:9092")
+    intercept[IllegalArgumentException] {
+      KafkaConfig.fromProps(props)
+    }
+  }
+
+  @Test
   def testFromPropsInvalid() {
     def getBaseProperties(): Properties = {
       val validRequiredProperties = new Properties()
@@ -412,7 +440,7 @@ class KafkaConfigTest {
         case KafkaConfig.RackLocatorPropsProp => // ignore string
 
         case KafkaConfig.AuthorizerClassNameProp => //ignore string
-          
+
         case KafkaConfig.PortProp => assertPropertyInvalid(getBaseProperties(), name, "not_a_number")
         case KafkaConfig.HostNameProp => // ignore string
         case KafkaConfig.AdvertisedHostNameProp => //ignore string
@@ -534,6 +562,7 @@ class KafkaConfigTest {
     defaults.put(KafkaConfig.ZkConnectProp, "127.0.0.1:2181")
     // For ZkConnectionTimeoutMs
     defaults.put(KafkaConfig.ZkSessionTimeoutMsProp, "1234")
+    defaults.put(KafkaConfig.BrokerIdGenerationEnableProp, "false")
     defaults.put(KafkaConfig.MaxReservedBrokerIdProp, "1")
     defaults.put(KafkaConfig.BrokerIdProp, "1")
     defaults.put(KafkaConfig.HostNameProp, "127.0.0.1")
@@ -550,6 +579,7 @@ class KafkaConfigTest {
     val config = KafkaConfig.fromProps(defaults)
     Assert.assertEquals("127.0.0.1:2181", config.zkConnect)
     Assert.assertEquals(1234, config.zkConnectionTimeoutMs)
+    Assert.assertEquals(false, config.brokerIdGenerationEnable)
     Assert.assertEquals(1, config.maxReservedBrokerId)
     Assert.assertEquals(1, config.brokerId)
     Assert.assertEquals("127.0.0.1", config.hostName)
