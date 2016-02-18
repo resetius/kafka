@@ -145,7 +145,7 @@ import java.util.regex.Pattern;
  *     props.put(&quot;session.timeout.ms&quot;, &quot;30000&quot;);
  *     props.put(&quot;key.deserializer&quot;, &quot;org.apache.kafka.common.serialization.StringDeserializer&quot;);
  *     props.put(&quot;value.deserializer&quot;, &quot;org.apache.kafka.common.serialization.StringDeserializer&quot;);
- *     KafkaConsumer&lt;String, String&gt; consumer = new KafkaConsumer&lt;String, String&gt;(props);
+ *     KafkaConsumer&lt;String, String&gt; consumer = new KafkaConsumer&lt;&gt;(props);
  *     consumer.subscribe(Arrays.asList(&quot;foo&quot;, &quot;bar&quot;));
  *     while (true) {
  *         ConsumerRecords&lt;String, String&gt; records = consumer.poll(100);
@@ -200,22 +200,47 @@ import java.util.regex.Pattern;
  *     props.put(&quot;session.timeout.ms&quot;, &quot;30000&quot;);
  *     props.put(&quot;key.deserializer&quot;, &quot;org.apache.kafka.common.serialization.StringDeserializer&quot;);
  *     props.put(&quot;value.deserializer&quot;, &quot;org.apache.kafka.common.serialization.StringDeserializer&quot;);
- *     KafkaConsumer&lt;String, String&gt; consumer = new KafkaConsumer&lt;String, String&gt;(props);
+ *     KafkaConsumer&lt;String, String&gt; consumer = new KafkaConsumer&lt;&gt;(props);
  *     consumer.subscribe(Arrays.asList(&quot;foo&quot;, &quot;bar&quot;));
- *     int commitInterval = 200;
- *     List&lt;ConsumerRecord&lt;String, String&gt;&gt; buffer = new ArrayList&lt;ConsumerRecord&lt;String, String&gt;&gt;();
+ *     final int minBatchSize = 200;
+ *     List&lt;ConsumerRecord&lt;String, String&gt;&gt; buffer = new ArrayList&lt;&gt;();
  *     while (true) {
  *         ConsumerRecords&lt;String, String&gt; records = consumer.poll(100);
  *         for (ConsumerRecord&lt;String, String&gt; record : records) {
  *             buffer.add(record);
- *             if (buffer.size() &gt;= commitInterval) {
- *                 insertIntoDb(buffer);
- *                 consumer.commitSync();
- *                 buffer.clear();
- *             }
+ *         }
+ *         if (buffer.size() &gt;= minBatchSize) {
+ *             insertIntoDb(buffer);
+ *             consumer.commitSync();
+ *             buffer.clear();
  *         }
  *     }
  * </pre>
+ *
+ * The above example uses {@link #commitSync() commitSync} to mark all received messages as committed. In some cases
+ * you may wish to have even finer control over which messages have been committed by specifying an offset explicitly.
+ * In the example below we commit offset after we finish handling the messages in each partition.
+ * <p>
+ * <pre>
+ *     try {
+ *         while(running) {
+ *             ConsumerRecords&lt;String, String&gt; records = consumer.poll(Long.MAX_VALUE);
+ *             for (TopicPartition partition : records.partitions()) {
+ *                 List&lt;ConsumerRecord&lt;String, String&gt;&gt; partitionRecords = records.records(partition);
+ *                 for (ConsumerRecord&lt;String, String&gt; record : partitionRecords) {
+ *                     System.out.println(record.offset() + &quot;: &quot; + record.value());
+ *                 }
+ *                 long lastOffset = partitionRecords.get(partitionRecords.size() - 1).offset();
+ *                 consumer.commitSync(Collections.singletonMap(partition, new OffsetAndMetadata(lastOffset + 1)));
+ *             }
+ *         }
+ *     } finally {
+ *       consumer.close();
+ *     }
+ * </pre>
+ *
+ * <b>Note: The committed offset should always be the offset of the next message that your application will read.</b>
+ * Thus, when calling {@link #commitSync(Map) commitSync(offsets)} you should add one to the offset of the last message processed.
  *
  * <h4>Subscribing To Specific Partitions</h4>
  *
@@ -919,7 +944,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
      * <p>
      * This commits offsets to Kafka. The offsets committed using this API will be used on the first fetch after every
      * rebalance and also on startup. As such, if you need to store offsets in anything other than Kafka, this API
-     * should not be used.
+     * should not be used. The committed offset should be the next message your application will consume,
+     * i.e. lastProcessedMessageOffset + 1.
      * <p>
      * This is a synchronous commits and will block until either the commit succeeds or an unrecoverable error is
      * encountered (in which case it is thrown to the caller).
@@ -981,7 +1007,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
      * <p>
      * This commits offsets to Kafka. The offsets committed using this API will be used on the first fetch after every
      * rebalance and also on startup. As such, if you need to store offsets in anything other than Kafka, this API
-     * should not be used.
+     * should not be used. The committed offset should be the next message your application will consume,
+     * i.e. lastProcessedMessageOffset + 1.
      * <p>
      * This is an asynchronous call and will not block. Any errors encountered are either passed to the callback
      * (if provided) or discarded.
