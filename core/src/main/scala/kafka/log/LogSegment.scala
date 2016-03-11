@@ -16,6 +16,8 @@
  */
 package kafka.log
 
+import java.nio.channels.WritableByteChannel
+
 import kafka.message._
 import kafka.common._
 import kafka.utils._
@@ -209,14 +211,14 @@ class LogSegment(val log: FileMessageSet,
    * @return The number of log bytes truncated
    */
   @nonthreadsafe
-  def truncateTo(offset: Long): Int = {
+  def truncateTo(offset: Long, saveTo: WritableByteChannel = null): Int = {
     val mapping = translateOffset(offset)
     if(mapping == null)
       return 0
     index.truncateTo(offset)
     // after truncation, reset and allocate more space for the (new currently  active) index
     index.resize(index.maxIndexSize)
-    val bytesTruncated = log.truncateTo(mapping.position)
+    val bytesTruncated = log.truncateTo(mapping.position, saveTo)
     if(log.sizeInBytes == 0)
       created = time.milliseconds
     bytesSinceLastIndexEntry = 0

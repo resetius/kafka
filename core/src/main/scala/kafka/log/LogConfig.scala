@@ -41,6 +41,7 @@ object Defaults {
   val MinCleanableDirtyRatio = kafka.server.Defaults.LogCleanerMinCleanRatio
   val Compact = kafka.server.Defaults.LogCleanupPolicy
   val UncleanLeaderElectionEnable = kafka.server.Defaults.UncleanLeaderElectionEnable
+  val SaveUncleanEnable = kafka.server.Defaults.SaveUncleanEnable
   val MinInSyncReplicas = kafka.server.Defaults.MinInSyncReplicas
   val CompressionType = kafka.server.Defaults.CompressionType
   val PreAllocateEnable = kafka.server.Defaults.LogPreAllocateEnable
@@ -66,6 +67,7 @@ case class LogConfig(props: java.util.Map[_, _]) extends AbstractConfig(LogConfi
   val minCleanableRatio = getDouble(LogConfig.MinCleanableDirtyRatioProp)
   val compact = getString(LogConfig.CleanupPolicyProp).toLowerCase != LogConfig.Delete
   val uncleanLeaderElectionEnable = getBoolean(LogConfig.UncleanLeaderElectionEnableProp)
+  val saveUncleanEnable = getBoolean(LogConfig.SaveUncleanEnableProp)
   val minInSyncReplicas = getInt(LogConfig.MinInSyncReplicasProp)
   val compressionType = getString(LogConfig.CompressionTypeProp).toLowerCase
   val preallocate = getBoolean(LogConfig.PreAllocateEnableProp)
@@ -98,6 +100,7 @@ object LogConfig {
   val MinCleanableDirtyRatioProp = "min.cleanable.dirty.ratio"
   val CleanupPolicyProp = "cleanup.policy"
   val UncleanLeaderElectionEnableProp = "unclean.leader.election.enable"
+  val SaveUncleanEnableProp = "unclean.save.enable"
   val MinInSyncReplicasProp = "min.insync.replicas"
   val CompressionTypeProp = "compression.type"
   val PreAllocateEnableProp = "preallocate"
@@ -119,6 +122,7 @@ object LogConfig {
   val MinCleanableRatioDoc = "The ratio of bytes that are available for cleaning to the bytes already cleaned"
   val CompactDoc = "Should old segments in this log be deleted or deduplicated?"
   val UncleanLeaderElectionEnableDoc = "Indicates whether unclean leader election is enabled"
+  val SaveUncleanEnableDoc = ""
   val MinInSyncReplicasDoc = "If number of insync replicas drops below this number, we stop accepting writes with" +
     " -1 (or all) required acks"
   val CompressionTypeDoc = "Specify the final compression type for a given topic. This configuration accepts the " +
@@ -154,6 +158,8 @@ object LogConfig {
         CompactDoc)
       .define(UncleanLeaderElectionEnableProp, BOOLEAN, Defaults.UncleanLeaderElectionEnable,
         MEDIUM, UncleanLeaderElectionEnableDoc)
+      .define(SaveUncleanEnableProp, BOOLEAN, Defaults.SaveUncleanEnable,
+        MEDIUM, SaveUncleanEnableDoc)
       .define(MinInSyncReplicasProp, INT, Defaults.MinInSyncReplicas, atLeast(1), MEDIUM, MinInSyncReplicasDoc)
       .define(CompressionTypeProp, STRING, Defaults.CompressionType, in(BrokerCompressionCodec.brokerCompressionOptions:_*), MEDIUM, CompressionTypeDoc)
       .define(PreAllocateEnableProp, BOOLEAN, Defaults.PreAllocateEnable,
