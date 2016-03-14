@@ -839,7 +839,7 @@ class Log(var dir: File,
     do {
       f = new File(lostAndFound + "/" + segment.log.file.getName + "." + i)
       i += 1
-    } while (!f.exists())
+    } while (f.exists())
 
     f
   }
