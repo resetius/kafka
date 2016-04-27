@@ -108,6 +108,7 @@ class KafkaHealthcheck(brokerId: Int,
 
     override def handleSessionEstablishmentError(error: Throwable) {
       fatal("Could not establish session with zookeeper", error)
+      Runtime.getRuntime.halt(1)
     }
 
   }
