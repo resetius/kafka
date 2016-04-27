@@ -171,9 +171,9 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
   private val autoRebalanceScheduler = new KafkaScheduler(1)
   var deleteTopicManager: TopicDeletionManager = null
   val offlinePartitionSelector = new OfflinePartitionLeaderSelector(controllerContext, config)
-  private val reassignedPartitionLeaderSelector = new ReassignedPartitionLeaderSelector(controllerContext)
-  private val preferredReplicaPartitionLeaderSelector = new PreferredReplicaPartitionLeaderSelector(controllerContext)
-  private val controlledShutdownPartitionLeaderSelector = new ControlledShutdownLeaderSelector(controllerContext)
+  private val reassignedPartitionLeaderSelector = new ReassignedPartitionLeaderSelector(controllerContext, config)
+  private val preferredReplicaPartitionLeaderSelector = new PreferredReplicaPartitionLeaderSelector(controllerContext, config)
+  private val controlledShutdownPartitionLeaderSelector = new ControlledShutdownLeaderSelector(controllerContext, config)
   private val brokerRequestBatch = new ControllerBrokerRequestBatch(this)
 
   private val partitionReassignedListener = new PartitionsReassignedListener(this)
