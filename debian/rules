@@ -15,7 +15,7 @@ GRADLE_PARAMS += -Psigning.secretKeyRingFile=/home/jenkins/.gnupg/secring.gpg
 override_dh_auto_build:
 	gradle
 	./gradlew $(GRADLE_PARAMS) clean releaseTarGz uploadArchives
-	tar xf ./core/build/distributions/kafka_2.11-0.9.0.1.tgz
+	tar xf ./core/build/distributions/kafka_2.11-0.9.0.2.tgz
 
 override_dh_installinit:
 	dh_installinit --name=statbox-kafka --noscripts 
