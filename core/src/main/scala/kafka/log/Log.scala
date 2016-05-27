@@ -844,25 +844,21 @@ class Log(var dir: File,
     f
   }
 
-  private def deleteOrSave(segmentsToDelete: Iterable[LogSegment], save: Boolean = false): Unit = {
-    if (save) {
-      new File(lostAndFound).mkdirs()
+  private def saveSegmentUnlocked(segment: LogSegment): Unit = {
+    val dir = new File(lostAndFound)
+    if (!dir.exists()) {
+      dir.mkdirs()
     }
 
-    for (segment <- segmentsToDelete) {
-      if (save) {
-        try {
-          segment.log.renameTo(lostAndFoundSegment(segment))
-          segment.index.delete()
-          segment.close()
-        } catch {
-          case e: Throwable => 
-            error("cannot rename segment to %s".format(lostAndFoundSegment(segment)))
-            Runtime.getRuntime.halt(1)
-        }
-      } else {
-        deleteSegment(segment)
-      }
+    try {
+      segment.log.renameTo(lostAndFoundSegment(segment))
+      segment.index.delete()
+      segment.close()
+      segments.remove(segment.baseOffset)
+    } catch {
+      case e: Throwable =>
+        error("cannot rename segment to %s".format(lostAndFoundSegment(segment)))
+        Runtime.getRuntime.halt(1)
     }
   }
 
@@ -883,7 +879,11 @@ class Log(var dir: File,
         truncateFullyAndStartAt(targetOffset, save)
       } else {
         val deletable = logSegments.filter(segment => segment.baseOffset > targetOffset)
-        deleteOrSave(deletable, save)
+        if (save) {
+          deletable.foreach(saveSegmentUnlocked(_))
+        } else {
+          deletable.foreach(deleteSegment(_))
+        }
         var saveTo: FileChannel = null
         try {
           if (save) {
@@ -910,7 +910,11 @@ class Log(var dir: File,
     debug("Truncate and start log '" + name + "' to " + newOffset)
     lock synchronized {
       val segmentsToDelete = logSegments.toList
-      deleteOrSave(segmentsToDelete, save)
+      if (save) {
+        segmentsToDelete.foreach(saveSegmentUnlocked(_))
+      } else {
+        segmentsToDelete.foreach(deleteSegment(_))
+      }
       addSegment(new LogSegment(dir,
                                 newOffset,
                                 indexIntervalBytes = config.indexInterval, 
