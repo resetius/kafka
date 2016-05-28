@@ -411,7 +411,7 @@ class Log(var dir: File,
                 .format(this.name, appendInfo.firstOffset, nextOffsetMetadata.messageOffset, validMessages))
 
         if(unflushedMessages >= config.flushInterval)
-          flush()
+          flush(flushIndex = false)
 
         appendInfo
       }
@@ -780,7 +780,7 @@ class Log(var dir: File,
       // The next offset should not change.
       updateLogEndOffset(nextOffsetMetadata.messageOffset)
       // schedule an asynchronous flush of the old segment
-      scheduler.schedule("flush-log", () => flush(newOffset), delay = 0L)
+      scheduler.schedule("flush-log", () => flush(newOffset, flushIndex = true), delay = 0L)
       
       // fsync dir
       var file: FileChannel = null
@@ -809,20 +809,22 @@ class Log(var dir: File,
   /**
    * Flush all log segments
    */
-  def flush(): Unit = flush(this.logEndOffset)
+  def flush(flushIndex: Boolean): Unit = flush(this.logEndOffset, flushIndex = flushIndex)
+  
+  def flush(): Unit = flush(true)
 
   /**
    * Flush log segments for all offsets up to offset-1
    * @param offset The offset to flush up to (non-inclusive); the new recovery point
    */
-  def flush(offset: Long) : Unit = {
+  def flush(offset: Long, flushIndex: Boolean) : Unit = {
     if (offset <= this.recoveryPoint)
       return
     debug("Flushing log '" + name + " up to offset " + offset + ", last flushed: " + lastFlushTime + " current time: " +
           time.milliseconds + " unflushed = " + unflushedMessages)
     for(segment <- logSegments(this.recoveryPoint, offset))
-      segment.flush()
-    lock synchronized {
+      segment.flush(flushIndex)
+    if (flushIndex) lock synchronized {
       if(offset > this.recoveryPoint) {
         this.recoveryPoint = offset
         lastflushedTime.set(time.milliseconds)

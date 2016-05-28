@@ -246,10 +246,12 @@ class LogSegment(val log: FileMessageSet,
    * Flush this log segment to disk
    */
   @threadsafe
-  def flush() {
+  def flush(flushIndex: Boolean) {
     LogFlushStats.logFlushTimer.time {
       log.flush()
-      index.flush()
+      if (flushIndex) {
+        index.flush()
+      }
     }
   }
   
