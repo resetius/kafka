@@ -234,7 +234,7 @@ class FileMessageSet private[kafka](@volatile var file: File,
    * Commit all written data to the physical disk
    */
   def flush() = {
-    channel.force(true)
+    channel.force(false)
   }
   
   /**
