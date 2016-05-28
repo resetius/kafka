@@ -240,7 +240,7 @@ class LogManager(val logDirs: Array[File],
       val jobsForDir = logsInDir map { log =>
         CoreUtils.runnable {
           // flush the log to ensure latest possible recovery point
-          log.flush()
+          log.flush(flushIndex = true)
           log.close()
         }
       }
@@ -469,7 +469,7 @@ class LogManager(val logDirs: Array[File],
         debug("Checking if flush is needed on " + topicAndPartition.topic + " flush interval  " + log.config.flushMs +
               " last flushed " + log.lastFlushTime + " time since last flush: " + timeSinceLastFlush)
         if(timeSinceLastFlush >= log.config.flushMs)
-          log.flush
+          log.flush(flushIndex = true)
       } catch {
         case e: Throwable =>
           error("Error flushing topic " + topicAndPartition.topic, e)

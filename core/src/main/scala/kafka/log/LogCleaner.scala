@@ -414,7 +414,7 @@ private[log] class Cleaner(val id: Int,
       timeIndex.trimToValidSize()
 
       // flush new segment to disk before swap
-      cleaned.flush()
+      cleaned.flush(true)
 
       // update the modification date to retain the last modified date of the original files
       val modified = segments.last.lastModified
