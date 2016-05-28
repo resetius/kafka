@@ -782,6 +782,19 @@ class Log(var dir: File,
       // schedule an asynchronous flush of the old segment
       scheduler.schedule("flush-log", () => flush(newOffset), delay = 0L)
       
+      // fsync dir
+      var file: FileChannel = null
+      try {
+        file = FileChannel.open(dir.toPath, java.nio.file.StandardOpenOption.READ)
+        file.force(true)
+      } catch {
+        case e: Throwable =>
+      } finally {
+        if (file != null) {
+          file.close()
+        }
+      }
+      
       info("Rolled new log segment for '" + name + "' in %.0f ms.".format((System.nanoTime - start) / (1000.0*1000.0)))
 
       segment
