@@ -851,6 +851,11 @@ class Log(var dir: File,
     var f: File = null
     var i = 0
 
+    val dir = new File(lostAndFound)
+    if (!dir.exists()) {
+      dir.mkdirs()
+    }
+    
     do {
       f = new File(lostAndFound + "/" + segment.log.file.getName + "." + i)
       i += 1
