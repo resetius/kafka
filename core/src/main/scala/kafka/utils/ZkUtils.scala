@@ -759,9 +759,13 @@ class ZkUtils(val zkClient: ZkClient,
    * @return An optional Broker object encapsulating the broker metadata
    */
   def getBrokerInfo(brokerId: Int): Option[Broker] = {
-    readDataMaybeNull(BrokerIdsPath + "/" + brokerId)._1 match {
-      case Some(brokerInfo) => Some(Broker.createBroker(brokerId, brokerInfo))
-      case None => None
+    readDataMaybeNull(BrokerIdsPath + "/" + brokerId) match {
+      case (Some(brokerInfo), stat) => {
+        val broker = Broker.createBroker(brokerId, brokerInfo)
+        broker.ctime = stat.getCtime
+        Some(broker)
+      }
+      case (None, _) => None
     }
   }
 
