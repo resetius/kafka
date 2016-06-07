@@ -1,3 +1,9 @@
+statbox-kafka (0.9.0.2-6) trusty; urgency=medium
+
+  * [LOGBROKER-1611][KAFKA-1120] use broker creation time when adding new brokers 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 07 Jun 2016 12:41:09 +0300
+
 statbox-kafka (0.9.0.2-5) trusty; urgency=medium
 
   * [LOGBROKER-1613] fix race condition on OffsetRequest 
