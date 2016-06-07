@@ -358,9 +358,17 @@ class ReplicaStateMachine(controller: KafkaController) extends Logging {
           ControllerStats.leaderElectionTimer.time {
             try {
               val curBrokerIds = currentBrokerList.map(_.toInt).toSet
-              val newBrokerIds = curBrokerIds -- controllerContext.liveOrShuttingDownBrokerIds
-              val newBrokerInfo = newBrokerIds.map(zkUtils.getBrokerInfo(_))
-              val newBrokers = newBrokerInfo.filter(_.isDefined).map(_.get)
+              val curBrokers = curBrokerIds.flatMap(zkUtils.getBrokerInfo)
+              val newBrokers = (for (broker <- curBrokers) yield {
+                if (!controllerContext.liveOrShuttingDownBrokers.contains(broker)
+                  || (controllerContext.liveOrShuttingDownBrokers.find(p => p.id == broker.id).get.ctime < broker.ctime)) 
+                {
+                  Some(broker)
+                } else {
+                  None
+                }
+              }).flatten
+              val newBrokerIds = newBrokers.map(_.id)
               val deadBrokerIds = controllerContext.liveOrShuttingDownBrokerIds -- curBrokerIds
               controllerContext.liveBrokers = curBrokerIds.map(zkUtils.getBrokerInfo(_)).filter(_.isDefined).map(_.get)
               info("Newly added brokers: %s, deleted brokers: %s, all live brokers: %s"

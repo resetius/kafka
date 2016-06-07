@@ -104,7 +104,8 @@ object Broker {
 }
 
 case class Broker(id: Int, endPoints: Map[SecurityProtocol, EndPoint]) {
-
+  var ctime = 0L
+  
   override def toString: String = id + " : " + endPoints.values.mkString("(",",",")")
 
   def this(id: Int, host: String, port: Int, protocol: SecurityProtocol = SecurityProtocol.PLAINTEXT) = {
