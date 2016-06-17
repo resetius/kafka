@@ -78,7 +78,6 @@ class SimpleFetchTest {
 
     // create the log which takes read with either HW max offset or none max offset
     val log = EasyMock.createMock(classOf[Log])
-    EasyMock.expect(log.readHighWatermark()).andReturn(0L).atLeastOnce()
     EasyMock.expect(log.logEndOffset).andReturn(leaderLEO).anyTimes()
     EasyMock.expect(log.logEndOffsetMetadata).andReturn(new LogOffsetMetadata(leaderLEO)).anyTimes()
     EasyMock.expect(log.read(0, fetchSize, Some(partitionHW))).andReturn(
@@ -91,7 +90,6 @@ class SimpleFetchTest {
         new LogOffsetMetadata(0L, 0L, 0),
         new ByteBufferMessageSet(messagesToLEO)
       )).anyTimes()
-    EasyMock.expect(log.writeHighWatermark(0L)).times(1)
     EasyMock.replay(log)
 
     // create the log manager that is aware of this mock log
