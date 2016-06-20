@@ -17,8 +17,6 @@
 
 package kafka.log
 
-import java.nio.ByteBuffer
-
 import kafka.utils._
 import kafka.message._
 import kafka.common._
@@ -86,47 +84,6 @@ class Log(var dir: File,
       config.segmentSize
     else
       0
-  }
-
-  private val hwmFile = new File(dir.getAbsolutePath + "/highwatermark.bin")
-  private var hwmChannel = FileMessageSet.openChannel(hwmFile, mutable = true)
-  private val hwmChannelLock = new Object
-
-  def writeHighWatermark(offset: Long): Unit = {
-    try {
-      val buffer = ByteBuffer.allocate(4 + 8)
-      buffer.putInt(0)
-      buffer.putLong(offset)
-      buffer.rewind()
-
-      hwmChannelLock synchronized {
-        hwmChannel.position(0)
-        hwmChannel.write(buffer)
-      }
-    } catch {
-      case e: IOException => throw new KafkaStorageException("I/O exception in write highwatermark to '%s'".format(hwmFile.getAbsolutePath), e)
-    }
-  }
-
-  def readHighWatermark(): Long = {
-    val buffer = ByteBuffer.allocate(4+8)
-
-    hwmChannelLock synchronized {
-      hwmChannel.position(0)
-      hwmChannel.read(buffer)
-    }
-
-    if (buffer.remaining() > 4) {
-      val version = buffer.getInt
-      if (version == 0) {
-        buffer.getLong
-      } else {
-        warn("%s: unknown version: %d".format(hwmFile.getAbsolutePath, version))
-        0L
-      }
-    } else {
-      0L
-    }
   }
 
   /* the actual segments of the log */
@@ -333,7 +290,6 @@ class Log(var dir: File,
     lock synchronized {
       for(seg <- logSegments)
         seg.close()
-      hwmChannel.close()
     }
   }
 
@@ -603,7 +559,6 @@ class Log(var dir: File,
     val newdir = new File(basedir + "/" + dir.getName)
 
     val old = new File(dir.getAbsolutePath)
-    val oldHwmFile = hwmFile
 
     warn("moving %s -> %s".format(dir.getAbsolutePath, newdir.getAbsoluteFile))
 
@@ -625,16 +580,6 @@ class Log(var dir: File,
     }
 
     if (moving) {
-      // LOGBROKER-1075
-      val oldHwmChannel = hwmChannel
-      val newHwmChannel = FileMessageSet.openChannel(hwmFile, mutable = true)
-      hwmChannelLock synchronized {
-        newHwmChannel.transferFrom(oldHwmChannel, 0, oldHwmChannel.size())
-        hwmChannel = newHwmChannel
-        oldHwmChannel.close()
-      }
-      oldHwmFile.delete()
-      
       for (segment <- segments) {
         val segmentFile = segment.log.file.getName
         val indexFile   = segment.index.file.getName
@@ -840,8 +785,6 @@ class Log(var dir: File,
       removeLogMetrics()
       logSegments.foreach(_.delete())
       segments.clear()
-      CoreUtils.swallow(hwmChannel.close())
-      hwmFile.delete()
       CoreUtils.rm(dir)
     }
   }
