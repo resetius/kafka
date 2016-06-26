@@ -1,0 +1,9 @@
+[Unit]
+Description=Kafka
+After=syslog.target network.target
+[Service]
+Type=simple
+ExecStart=/usr/lib/kafka/bin/kafka-service-start.sh
+TimeoutStopSec=1800
+Restart=on-failure
+RestartSec=30s
