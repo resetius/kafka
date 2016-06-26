@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -x /bin/systemctl ]
+then
+	/bin/systemctl daemon-reload
+fi
+
+#DEBHELPER#
+

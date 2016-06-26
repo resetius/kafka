@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Alexey Ozeritsky <aozeritsky@yandex-team.ru>
 Vcs-Browser: https://github.yandex-team.ru/statbox/kafka
 Vcs-Git: https://github.yandex-team.ru/statbox/kafka.git
-Build-Depends: debhelper (>=9), dh-systemd, java8-jdk, gradle
+Build-Depends: debhelper (>=9), java8-jdk, gradle
 Standards-Version: 3.9.3
 
 Package: statbox-kafka
