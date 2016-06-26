@@ -18,7 +18,9 @@ override_dh_auto_build:
 	gradle
 	./gradlew $(GRADLE_PARAMS) $(BUILD_TARGETS)
 	tar xf ./core/build/distributions/kafka_2.11-0.9.0.2.tgz
+	mkdir -p debian/tmp
+	cp debian/statbox-kafka.statbox-kafka.service debian/tmp/statbox-kafka.service
 
 override_dh_installinit:
 	dh_installinit --name=statbox-kafka --noscripts 
-	dh_systemd_enable --name=statbox-kafka --noscripts
+#	dh_systemd_enable --name=statbox-kafka --noscripts
