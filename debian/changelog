@@ -1,3 +1,10 @@
+statbox-kafka (0.9.0.2-9) trusty; urgency=medium
+
+  * [STATADMIN-3811] systemd script
+  * [KAFKA-3038] revert bad patch
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 27 Jun 2016 02:26:04 +0300
+
 statbox-kafka (0.9.0.2-8) trusty; urgency=medium
 
   * [KAFKA-3038][LOGBROKER-1660] import Eno Thereska's patch 
