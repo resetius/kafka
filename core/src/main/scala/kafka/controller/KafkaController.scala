@@ -179,7 +179,7 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
   newGauge(
     "ActiveControllerCount",
     new Gauge[Int] {
-      def value() = if (isActive) 1 else 0
+      def value() = if (isActiveUnlocked) 1 else 0
     }
   )
 
@@ -395,8 +395,12 @@ class KafkaController(val config : KafkaConfig, zkUtils: ZkUtils, val brokerStat
    */
   def isActive(): Boolean = {
     inLock(controllerContext.controllerLock) {
-      controllerContext.controllerChannelManager != null
+      isActiveUnlocked
     }
+  }
+
+  private def isActiveUnlocked(): Boolean = {
+    controllerContext.controllerChannelManager != null
   }
 
   /**
