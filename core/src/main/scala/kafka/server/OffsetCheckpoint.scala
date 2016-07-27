@@ -155,7 +155,7 @@ class OffsetCheckpoint(val file: File) extends Logging {
         result = readOne(files(idx))
         searching = false
       } catch {
-        case e: IOException =>
+        case e: Throwable =>
           warn("broken snapshot: %s".format(files(idx)), e)
       }
 
