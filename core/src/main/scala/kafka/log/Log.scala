@@ -24,7 +24,6 @@ import kafka.metrics.KafkaMetricsGroup
 import kafka.server.{LogOffsetMetadata, FetchDataInfo, BrokerTopicStats}
 
 import java.io.{IOException, File}
-import java.nio.channels.FileChannel
 import java.util.concurrent.{ConcurrentNavigableMap, ConcurrentSkipListMap}
 import java.util.concurrent.atomic._
 import java.text.NumberFormat
@@ -728,6 +727,7 @@ class Log(var dir: File,
       scheduler.schedule("flush-log", () => flush(newOffset, flushIndex = true), delay = 0L)
       
       // fsync dir
+      import java.nio.channels.FileChannel
       var file: FileChannel = null
       try {
         file = FileChannel.open(dir.toPath, java.nio.file.StandardOpenOption.READ)
@@ -789,47 +789,11 @@ class Log(var dir: File,
     }
   }
 
-  private val lostAndFound = dir.getParent + "/" + LostAndFound + "/" + name
-  private def lostAndFoundSegment(segment: LogSegment) = {
-    var f: File = null
-    var i = 0
-
-    val dir = new File(lostAndFound)
-    if (!dir.exists()) {
-      dir.mkdirs()
-    }
-    
-    do {
-      f = new File(lostAndFound + "/" + segment.log.file.getName + "." + i)
-      i += 1
-    } while (f.exists())
-
-    f
-  }
-
-  private def saveSegmentUnlocked(segment: LogSegment): Unit = {
-    val dir = new File(lostAndFound)
-    if (!dir.exists()) {
-      dir.mkdirs()
-    }
-
-    try {
-      segment.log.renameTo(lostAndFoundSegment(segment))
-      segment.index.delete()
-      segment.close()
-      segments.remove(segment.baseOffset)
-    } catch {
-      case e: Throwable =>
-        error("cannot rename segment to %s".format(lostAndFoundSegment(segment)))
-        Runtime.getRuntime.halt(1)
-    }
-  }
-
   /**
    * Truncate this log so that it ends with the greatest offset < targetOffset.
    * @param targetOffset The offset to truncate to, an upper bound on all offsets in the log after truncation is complete.
    */
-  private[log] def truncateTo(targetOffset: Long, save: Boolean = false) {
+  private[log] def truncateTo(targetOffset: Long) {
     info("Truncating log %s to offset %d.".format(name, targetOffset))
     if(targetOffset < 0)
       throw new IllegalArgumentException("Cannot truncate to a negative offset (%d).".format(targetOffset))
@@ -839,26 +803,11 @@ class Log(var dir: File,
     }
     lock synchronized {
       if(segments.firstEntry.getValue.baseOffset > targetOffset) {
-        truncateFullyAndStartAt(targetOffset, save)
+        truncateFullyAndStartAt(targetOffset)
       } else {
         val deletable = logSegments.filter(segment => segment.baseOffset > targetOffset)
-        if (save) {
-          deletable.foreach(saveSegmentUnlocked(_))
-        } else {
-          deletable.foreach(deleteSegment(_))
-        }
-        var saveTo: FileChannel = null
-        try {
-          if (save) {
-            saveTo = FileMessageSet.openChannel(lostAndFoundSegment(activeSegment), mutable = true)
-          }
-          activeSegment.truncateTo(targetOffset, saveTo)
-        } finally {
-          if (saveTo != null) {
-            saveTo.close()
-          }
-        }
-          
+        deletable.foreach(deleteSegment(_))
+        activeSegment.truncateTo(targetOffset)
         updateLogEndOffset(targetOffset)
         this.recoveryPoint = math.min(targetOffset, this.recoveryPoint)
       }
@@ -869,16 +818,12 @@ class Log(var dir: File,
    *  Delete all data in the log and start at the new offset
    *  @param newOffset The new offset to start the log with
    */
-  private[log] def truncateFullyAndStartAt(newOffset: Long, save: Boolean = false) {
+  private[log] def truncateFullyAndStartAt(newOffset: Long) {
     debug("Truncate and start log '" + name + "' to " + newOffset)
     lock synchronized {
       val segmentsToDelete = logSegments.toList
-      if (save) {
-        segmentsToDelete.foreach(saveSegmentUnlocked(_))
-      } else {
-        segmentsToDelete.foreach(deleteSegment(_))
-      }
-      addSegment(new LogSegment(dir,
+      segmentsToDelete.foreach(deleteSegment(_))
+      addSegment(new LogSegment(dir, 
                                 newOffset,
                                 indexIntervalBytes = config.indexInterval, 
                                 maxIndexSize = config.maxIndexSize,
@@ -1047,8 +992,6 @@ object Log {
   /** TODO: Get rid of CleanShutdownFile in 0.8.2 */
   val CleanShutdownFile = ".kafka_cleanshutdown"
 
-  val LostAndFound = "lost+found"
-  
   /**
    * Make log segment file name from offset bytes. All this does is pad out the offset number with zeros
    * so that ls sorts the files numerically.
