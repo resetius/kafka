@@ -559,17 +559,19 @@ class Log(var dir: File,
 
     val old = new File(dir.getAbsolutePath)
 
-    warn("moving %s -> %s".format(dir.getAbsolutePath, newdir.getAbsoluteFile))
+    info("moving %s -> %s".format(dir.getAbsolutePath, newdir.getAbsoluteFile))
 
     var moving: Boolean = true
     var dropOld: Boolean = false
     val segments = lock synchronized {
       /* write new data to new disk*/
 
-      if (logEndOffset != logSegments.last.baseOffset) {
+      val lastOption = logSegments.lastOption
+
+      if (lastOption.nonEmpty && logEndOffset != lastOption.get.baseOffset) {
         newdir.mkdirs()
         val newSegment = roll(newdir)
-        warn("new segment created -> %s".format(newSegment.log.file.getAbsolutePath))
+        info("new segment created -> %s".format(newSegment.log.file.getAbsolutePath))
         dropOld = true
       } else {
         moving = false
