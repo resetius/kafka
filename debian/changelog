@@ -1,3 +1,9 @@
+statbox-kafka (0.9.0.2-20) trusty; urgency=medium
+
+  * [LOGBROKER-1780] NoSuchElementException fixed 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 09 Aug 2016 12:41:52 +0000
+
 statbox-kafka (0.9.0.2-19) trusty; urgency=medium
 
   * set restart limits for systemd service 
