@@ -173,13 +173,10 @@ class ReplicaFetcherThread(name: String,
       if (!LogConfig.fromProps(brokerConfig.originals, AdminUtils.fetchEntityConfig(replicaMgr.zkUtils,
         ConfigType.Topic, topicAndPartition.topic)).uncleanLeaderElectionEnable) {
         // Log a fatal error and shutdown the broker to ensure that data loss does not unexpectedly occur.
-        val msg = "Exiting because log truncation is not allowed for partition %s,".format(topicAndPartition) +
+        fatal("Halting because log truncation is not allowed for partition %s,".format(topicAndPartition) +
           " Current leader %d's latest offset %d is less than replica %d's latest offset %d"
-          .format(sourceBroker.id, leaderEndOffset, brokerConfig.brokerId, replica.logEndOffset.messageOffset)
-        fatal(msg)
-
-        replicaMgr.scheduler.schedule("exit", () => System.exit(1))
-        throw new Exception(msg)
+          .format(sourceBroker.id, leaderEndOffset, brokerConfig.brokerId, replica.logEndOffset.messageOffset))
+        Runtime.getRuntime.halt(1)
       }
 
       warn("Replica %d for partition %s reset its fetch offset from %d to current leader %d's latest offset %d"
