@@ -97,7 +97,7 @@ class ReplicaManager(val config: KafkaConfig,
                      time: Time,
                      jTime: JTime,
                      val zkUtils: ZkUtils,
-                     val scheduler: Scheduler,
+                     scheduler: Scheduler,
                      val logManager: LogManager,
                      val isShuttingDown: AtomicBoolean,
                      threadNamePrefix: Option[String] = None) extends Logging with KafkaMetricsGroup {
