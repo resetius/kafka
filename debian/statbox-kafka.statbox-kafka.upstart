@@ -1,0 +1,13 @@
+# vim: set ts=4 sw=4 et:
+
+stop on runlevel [!2345]
+
+respawn
+
+kill timeout 1800
+manual
+
+script
+exec /usr/lib/kafka/bin/kafka-service-start.sh
+end script
+

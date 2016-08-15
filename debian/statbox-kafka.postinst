@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ -x /bin/systemctl ]
+then
+	cp -f /usr/lib/kafka/config/statbox-kafka.statbox-kafka.service /lib/systemd/system/statbox-kafka.service
+	/bin/systemctl daemon-reload
+fi
+
+#DEBHELPER#
+
