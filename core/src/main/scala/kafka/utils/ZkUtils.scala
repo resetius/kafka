@@ -374,6 +374,8 @@ class ZkUtils(val zkClient: ZkClient,
                       "timestamp" -> timestamp
     )
     rack.foreach(rack => if (version >= 3) jsonMap += ("rack" -> rack))
+    // compatibility with LB <= 15, will be removed in future
+    rack.foreach(rack => jsonMap += ("rackId" -> rack))
 
     val brokerInfo = Json.encode(jsonMap)
     registerBrokerInZk(brokerIdPath, brokerInfo)
