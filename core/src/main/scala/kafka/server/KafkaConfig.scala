@@ -282,6 +282,7 @@ object KafkaConfig {
   val ReplicaFetchMaxBytesProp = "replica.fetch.max.bytes"
   val ReplicaFetchWaitMaxMsProp = "replica.fetch.wait.max.ms"
   val ReplicaFetchMinBytesProp = "replica.fetch.min.bytes"
+  val ReplicaFetchAvgBytesProp = "replica.fetch.avg.bytes"
   val ReplicaFetchResponseMaxBytesProp = "replica.fetch.response.max.bytes"
   val ReplicaFetchBackoffMsProp = "replica.fetch.backoff.ms"
   val NumReplicaFetchersProp = "num.replica.fetchers"
@@ -491,6 +492,7 @@ object KafkaConfig {
     "if the first message in the first non-empty partition of the fetch is larger than this value, the message will still be returned " +
     "to ensure that progress can be made. The maximum message size accepted by the broker is defined via " +
     "<code>message.max.bytes</code> (broker config) or <code>max.message.bytes</code> (topic config)."
+  val ReplicaFetchAvgBytesDoc = "Average bytes expected for each fetch response."
   val NumReplicaFetchersDoc = "Number of fetcher threads used to replicate messages from a source broker. " +
   "Increasing this value can increase the degree of I/O parallelism in the follower broker."
   val ReplicaFetchBackoffMsDoc = "The amount of time to sleep when fetch partition error occurs."
@@ -687,6 +689,7 @@ object KafkaConfig {
       .define(ReplicaFetchBackoffMsProp, INT, Defaults.ReplicaFetchBackoffMs, atLeast(0), MEDIUM, ReplicaFetchBackoffMsDoc)
       .define(ReplicaFetchMinBytesProp, INT, Defaults.ReplicaFetchMinBytes, HIGH, ReplicaFetchMinBytesDoc)
       .define(ReplicaFetchResponseMaxBytesProp, INT, Defaults.ReplicaFetchResponseMaxBytes, atLeast(0), MEDIUM, ReplicaFetchResponseMaxBytesDoc)
+      .define(ReplicaFetchAvgBytesProp, INT, Defaults.ReplicaFetchMaxBytes, HIGH, ReplicaFetchAvgBytesDoc)
       .define(NumReplicaFetchersProp, INT, Defaults.NumReplicaFetchers, HIGH, NumReplicaFetchersDoc)
       .define(ReplicaHighWatermarkCheckpointIntervalMsProp, LONG, Defaults.ReplicaHighWatermarkCheckpointIntervalMs, HIGH, ReplicaHighWatermarkCheckpointIntervalMsDoc)
       .define(FetchPurgatoryPurgeIntervalRequestsProp, INT, Defaults.FetchPurgatoryPurgeIntervalRequests, MEDIUM, FetchPurgatoryPurgeIntervalRequestsDoc)
@@ -895,6 +898,7 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
   val replicaFetchMaxBytes = getInt(KafkaConfig.ReplicaFetchMaxBytesProp)
   val replicaFetchWaitMaxMs = getInt(KafkaConfig.ReplicaFetchWaitMaxMsProp)
   val replicaFetchMinBytes = getInt(KafkaConfig.ReplicaFetchMinBytesProp)
+  val replicaFetchAvgBytes = getInt(KafkaConfig.ReplicaFetchAvgBytesProp)
   val replicaFetchResponseMaxBytes = getInt(KafkaConfig.ReplicaFetchResponseMaxBytesProp)
   val replicaFetchBackoffMs = getInt(KafkaConfig.ReplicaFetchBackoffMsProp)
   val numReplicaFetchers = getInt(KafkaConfig.NumReplicaFetchersProp)
@@ -1077,6 +1081,7 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
       s"Only GSSAPI mechanism is supported for inter-broker communication with SASL when inter.broker.protocol.version is set to $interBrokerProtocolVersionString")
     require(!interBrokerUsesSasl || saslEnabledMechanisms.contains(saslMechanismInterBrokerProtocol),
       s"${KafkaConfig.SaslMechanismInterBrokerProtocolProp} must be included in ${KafkaConfig.SaslEnabledMechanismsProp} when SASL is used for inter-broker communication")
+    require(replicaFetchAvgBytes <= replicaFetchMaxBytes)
   }
 
   val diskBalancerEnable = getBoolean(KafkaConfig.DiskBalancerEnableProp)
