@@ -1,3 +1,9 @@
+statbox-kafka (0.10.1.0-2) trusty; urgency=medium
+
+  * [LOGBROKER-1951] speedup ReplicaManager shutdown 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 13 Oct 2016 17:09:03 +0300
+
 statbox-kafka (0.10.1.0-1) trusty; urgency=medium
 
   * [LOGBROKER-1344] dont flush index too frequent
