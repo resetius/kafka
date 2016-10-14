@@ -17,28 +17,40 @@
  package kafka.utils
 
 import kafka.common._
+
 import scala.collection._
-import util.parsing.json.JSON
+import scala.util.parsing.json.{JSONArray, JSONObject, Parser => JSONParser}
 
 /**
  *  A wrapper that synchronizes JSON in scala, which is not threadsafe.
  */
 object Json extends Logging {
-  val myConversionFunc = {input : String => input.toInt}
-  JSON.globalNumberParser = myConversionFunc
-  val lock = new Object
+  class JSON extends JSONParser {
+    private def resolveType(input: Any): Any = input match {
+      case JSONObject(map) => map.transform { case (k,v) => resolveType(v) }
+      case JSONArray(seq) => seq.map(resolveType)
+      case other => other
+    }
+
+    def parse(input: String): Option[Any] = {
+      phrase(root)(new lexical.Scanner(input)) match {
+        case Success(result, _) => Some(resolveType(result))
+        case _ => None
+      }
+    }
+
+    defaultNumberParser = {input : String => input.toInt}
+  }
 
   /**
    * Parse a JSON string into an object
    */
   def parseFull(input: String): Option[Any] = {
-    lock synchronized {
-      try {
-        JSON.parseFull(input)
-      } catch {
-        case t: Throwable =>
-          throw new KafkaException("Can't parse json string: %s".format(input), t)
-      }
+    try {
+      (new JSON).parse(input)
+    } catch {
+      case t: Throwable =>
+        throw new KafkaException("Can't parse json string: %s".format(input), t)
     }
   }
   
