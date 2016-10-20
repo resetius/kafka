@@ -1,3 +1,9 @@
+statbox-kafka (0.10.1.0-3) trusty; urgency=medium
+
+  * KAFKA-3994 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 20 Oct 2016 13:04:58 +0300
+
 statbox-kafka (0.10.1.0-2) trusty; urgency=medium
 
   * [LOGBROKER-1951] speedup ReplicaManager shutdown 
