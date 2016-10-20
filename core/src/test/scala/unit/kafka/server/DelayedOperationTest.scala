@@ -61,8 +61,8 @@ class DelayedOperationTest {
     assertFalse("r2 not satisfied and hence watched", purgatory.tryCompleteElseWatch(r2, Array("test2")))
     r1.awaitExpiration()
     val elapsed = System.currentTimeMillis - start
-    assertTrue("r1 completed due to expiration", r1.isCompleted())
-    assertFalse("r2 hasn't completed", r2.isCompleted())
+    assertTrue("r1 completed due to expiration", r1.isCompleted)
+    assertFalse("r2 hasn't completed", r2.isCompleted)
     assertTrue("Time for expiration %d should at least %d".format(elapsed, expiration), elapsed >= expiration)
   }
 
