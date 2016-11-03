@@ -1,3 +1,9 @@
+statbox-kafka (0.10.1.0-4) trusty; urgency=medium
+
+  * STATADMIN-4369 disable respawn 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Thu, 03 Nov 2016 18:01:39 +0300
+
 statbox-kafka (0.10.1.0-3) trusty; urgency=medium
 
   * KAFKA-3994 
