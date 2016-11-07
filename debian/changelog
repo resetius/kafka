@@ -1,3 +1,9 @@
+statbox-kafka (0.10.1.0-5) trusty; urgency=medium
+
+  * Revert "[LOGBROKER-1543] fix leader selectors" 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Tue, 08 Nov 2016 02:31:11 +0300
+
 statbox-kafka (0.10.1.0-4) trusty; urgency=medium
 
   * STATADMIN-4369 disable respawn 
