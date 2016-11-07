@@ -61,11 +61,8 @@ class OfflinePartitionLeaderSelector(controllerContext: ControllerContext, confi
           if (liveBrokersInIsr.isEmpty) {
             // Prior to electing an unclean (i.e. non-ISR) leader, ensure that doing so is not disallowed by the configuration
             // for unclean leader election.
-
-            val unclean = LogConfig.fromProps(config.originals, AdminUtils.fetchEntityConfig(controllerContext.zkUtils,
-              ConfigType.Topic, topicAndPartition.topic)).uncleanLeaderElectionEnable
-
-            if (!unclean) {
+            if (!LogConfig.fromProps(config.originals, AdminUtils.fetchEntityConfig(controllerContext.zkUtils,
+              ConfigType.Topic, topicAndPartition.topic)).uncleanLeaderElectionEnable) {
               throw new NoReplicaOnlineException(("No broker in ISR for partition " +
                 "%s is alive. Live brokers are: [%s],".format(topicAndPartition, controllerContext.liveBrokerIds)) +
                 " ISR brokers are: [%s]".format(currentLeaderAndIsr.isr.mkString(",")))
@@ -81,14 +78,14 @@ class OfflinePartitionLeaderSelector(controllerContext: ControllerContext, confi
               val newLeader = liveAssignedReplicas.head
               warn("No broker in ISR is alive for %s. Elect leader %d from live brokers %s. There's potential data loss."
                 .format(topicAndPartition, newLeader, liveAssignedReplicas.mkString(",")))
-              new LeaderAndIsr(newLeader, currentLeaderEpoch + 1, if (unclean) { liveBrokersInIsr } else { List(newLeader) }, currentLeaderIsrZkPathVersion + 1)
+              new LeaderAndIsr(newLeader, currentLeaderEpoch + 1, List(newLeader), currentLeaderIsrZkPathVersion + 1)
             }
           } else {
             val liveReplicasInIsr = liveAssignedReplicas.filter(r => liveBrokersInIsr.contains(r))
             val newLeader = liveReplicasInIsr.head
             debug("Some broker in ISR is alive for %s. Select %d from ISR %s to be the leader."
               .format(topicAndPartition, newLeader, liveBrokersInIsr.mkString(",")))
-            new LeaderAndIsr(newLeader, currentLeaderEpoch + 1, List(newLeader), currentLeaderIsrZkPathVersion + 1)
+            new LeaderAndIsr(newLeader, currentLeaderEpoch + 1, liveBrokersInIsr.toList, currentLeaderIsrZkPathVersion + 1)
           }
         info("Selected new leader and ISR %s for offline partition %s".format(newLeaderAndIsr.toString(), topicAndPartition))
         (newLeaderAndIsr, liveAssignedReplicas)
@@ -103,7 +100,7 @@ class OfflinePartitionLeaderSelector(controllerContext: ControllerContext, confi
  * New isr = current isr
  * Replicas to receive LeaderAndIsr request = reassigned replicas
  */
-class ReassignedPartitionLeaderSelector(controllerContext: ControllerContext, config: KafkaConfig) extends PartitionLeaderSelector with Logging {
+class ReassignedPartitionLeaderSelector(controllerContext: ControllerContext) extends PartitionLeaderSelector with Logging {
   this.logIdent = "[ReassignedPartitionLeaderSelector]: "
 
   /**
@@ -117,16 +114,7 @@ class ReassignedPartitionLeaderSelector(controllerContext: ControllerContext, co
                                                                              currentLeaderAndIsr.isr.contains(r))
     val newLeaderOpt = aliveReassignedInSyncReplicas.headOption
     newLeaderOpt match {
-      case Some(newLeader) =>
-        val unclean = LogConfig.fromProps(config.originals, AdminUtils.fetchEntityConfig(controllerContext.zkUtils,
-          ConfigType.Topic, topicAndPartition.topic)).uncleanLeaderElectionEnable
-
-        (new LeaderAndIsr(newLeader, currentLeaderEpoch + 1,
-          if (unclean) {
-            currentLeaderAndIsr.isr
-          } else {
-            List(newLeader)
-          },
+      case Some(newLeader) => (new LeaderAndIsr(newLeader, currentLeaderEpoch + 1, currentLeaderAndIsr.isr,
         currentLeaderIsrZkPathVersion + 1), reassignedInSyncReplicas)
       case None =>
         reassignedInSyncReplicas.size match {
@@ -146,7 +134,7 @@ class ReassignedPartitionLeaderSelector(controllerContext: ControllerContext, co
  * New isr = current isr;
  * Replicas to receive LeaderAndIsr request = assigned replicas
  */
-class PreferredReplicaPartitionLeaderSelector(controllerContext: ControllerContext, config: KafkaConfig) extends PartitionLeaderSelector
+class PreferredReplicaPartitionLeaderSelector(controllerContext: ControllerContext) extends PartitionLeaderSelector
 with Logging {
   this.logIdent = "[PreferredReplicaPartitionLeaderSelector]: "
 
@@ -163,15 +151,7 @@ with Logging {
         " Trigerring preferred replica leader election")
       // check if preferred replica is not the current leader and is alive and in the isr
       if (controllerContext.liveBrokerIds.contains(preferredReplica) && currentLeaderAndIsr.isr.contains(preferredReplica)) {
-        val unclean = LogConfig.fromProps(config.originals, AdminUtils.fetchEntityConfig(controllerContext.zkUtils,
-          ConfigType.Topic, topicAndPartition.topic)).uncleanLeaderElectionEnable
-
-        (new LeaderAndIsr(preferredReplica, currentLeaderAndIsr.leaderEpoch + 1,
-          if (unclean) {
-            currentLeaderAndIsr.isr
-          } else {
-            List(preferredReplica)
-          },
+        (new LeaderAndIsr(preferredReplica, currentLeaderAndIsr.leaderEpoch + 1, currentLeaderAndIsr.isr,
           currentLeaderAndIsr.zkVersion + 1), assignedReplicas)
       } else {
         throw new StateChangeFailedException("Preferred replica %d for partition ".format(preferredReplica) +
@@ -186,7 +166,7 @@ with Logging {
  * New isr = current isr - shutdown replica;
  * Replicas to receive LeaderAndIsr request = live assigned replicas
  */
-class ControlledShutdownLeaderSelector(controllerContext: ControllerContext, config: KafkaConfig)
+class ControlledShutdownLeaderSelector(controllerContext: ControllerContext)
         extends PartitionLeaderSelector
         with Logging {
 
@@ -205,16 +185,8 @@ class ControlledShutdownLeaderSelector(controllerContext: ControllerContext, con
     val newIsr = currentLeaderAndIsr.isr.filter(brokerId => !controllerContext.shuttingDownBrokerIds.contains(brokerId))
     liveAssignedReplicas.find(newIsr.contains) match {
       case Some(newLeader) =>
-        val unclean = LogConfig.fromProps(config.originals, AdminUtils.fetchEntityConfig(controllerContext.zkUtils,
-          ConfigType.Topic, topicAndPartition.topic)).uncleanLeaderElectionEnable
-
         debug("Partition %s : current leader = %d, new leader = %d".format(topicAndPartition, currentLeader, newLeader))
-        (LeaderAndIsr(newLeader, currentLeaderEpoch + 1,
-          if (unclean) {
-            newIsr
-          } else {
-            List(newLeader)
-          }, currentLeaderIsrZkPathVersion + 1), liveAssignedReplicas)
+        (LeaderAndIsr(newLeader, currentLeaderEpoch + 1, newIsr, currentLeaderIsrZkPathVersion + 1), liveAssignedReplicas)
       case None =>
         throw new StateChangeFailedException(("No other replicas in ISR %s for %s besides" +
           " shutting down brokers %s").format(currentLeaderAndIsr.isr.mkString(","), topicAndPartition, controllerContext.shuttingDownBrokerIds.mkString(",")))

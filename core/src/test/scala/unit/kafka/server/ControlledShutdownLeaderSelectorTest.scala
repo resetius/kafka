@@ -23,7 +23,7 @@ import org.easymock.EasyMock
 import org.junit.{Assert, Test}
 import Assert._
 import kafka.cluster.Broker
-import kafka.utils.{TestUtils, ZkUtils}
+import kafka.utils.ZkUtils
 
 import scala.collection.mutable
 
@@ -44,8 +44,7 @@ class ControlledShutdownLeaderSelectorTest {
     controllerContext.shuttingDownBrokerIds = mutable.Set(2, 3)
     controllerContext.partitionReplicaAssignment = mutable.Map(topicPartition -> assignment)
 
-    val props = TestUtils.createBrokerConfig(0, TestUtils.MockZkConnect, port = 0)
-    val leaderSelector = new ControlledShutdownLeaderSelector(controllerContext, KafkaConfig.fromProps(props))
+    val leaderSelector = new ControlledShutdownLeaderSelector(controllerContext)
     val firstLeaderAndIsr = new LeaderAndIsr(firstLeader, firstIsr)
     val (secondLeaderAndIsr, secondReplicas) = leaderSelector.selectLeader(topicPartition, firstLeaderAndIsr)
 
