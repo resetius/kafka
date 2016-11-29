@@ -217,7 +217,7 @@ class LogManager(val logDirs: Array[File],
   /**
    * Close all the logs
    */
-  def shutdown() {
+  def shutdown(unclean : Boolean = false) {
     info("Shutting down.")
 
     val threadPools = mutable.ArrayBuffer.empty[ExecutorService]
@@ -230,7 +230,11 @@ class LogManager(val logDirs: Array[File],
 
     // close logs in each dir
     for (dir <- this.logDirs) {
-      debug("Flushing and closing logs at " + dir)
+      if (unclean) {
+        debug("Closing logs at " + dir + " (without flush)")
+      } else {
+        debug("Flushing and closing logs at " + dir)
+      }
 
       val pool = Executors.newFixedThreadPool(ioThreads)
       threadPools.append(pool)
@@ -239,8 +243,10 @@ class LogManager(val logDirs: Array[File],
 
       val jobsForDir = logsInDir map { log =>
         CoreUtils.runnable {
-          // flush the log to ensure latest possible recovery point
-          log.flush(flushIndex = true)
+          if (!unclean) {
+            // flush the log to ensure latest possible recovery point
+            log.flush(flushIndex = true)
+          }
           log.close()
         }
       }
@@ -257,9 +263,11 @@ class LogManager(val logDirs: Array[File],
         debug("Updating recovery points at " + dir)
         checkpointLogsInDir(dir)
 
-        // mark that the shutdown was clean by creating marker file
-        debug("Writing clean shutdown marker at " + dir)
-        CoreUtils.swallow(new File(dir, Log.CleanShutdownFile).createNewFile())
+        if (!unclean) {
+          // mark that the shutdown was clean by creating marker file
+          debug("Writing clean shutdown marker at " + dir)
+          CoreUtils.swallow(new File(dir, Log.CleanShutdownFile).createNewFile())
+        }
       }
     } catch {
       case e: ExecutionException => {
