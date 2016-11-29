@@ -17,6 +17,7 @@ import org.apache.kafka.clients.ClientResponse;
 import org.apache.kafka.clients.Metadata;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.NoOffsetForPartitionException;
+import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.Cluster;
@@ -41,7 +42,6 @@ import org.apache.kafka.common.protocol.Errors;
 import org.apache.kafka.common.record.InvalidRecordException;
 import org.apache.kafka.common.record.LogEntry;
 import org.apache.kafka.common.record.MemoryRecords;
-import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.common.record.Record;
 import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.common.requests.FetchRequest;
@@ -91,7 +91,6 @@ public class Fetcher<K, V> {
     private final FetchManagerMetrics sensors;
     private final SubscriptionState subscriptions;
     private final ConcurrentLinkedQueue<CompletedFetch> completedFetches;
-    private final AtomicInteger numInFlightFetches = new AtomicInteger(0);
     private final Deserializer<K> keyDeserializer;
     private final Deserializer<V> valueDeserializer;
 
@@ -137,15 +136,6 @@ public class Fetcher<K, V> {
         return !completedFetches.isEmpty();
     }
 
-    /**
-     * Check whether there are in-flight fetches. This is used to avoid unnecessary blocking in
-     * {@link ConsumerNetworkClient#poll(long)} if there are no fetches to wait for. This method is thread-safe.
-     * @return true if there are, false otherwise
-     */
-    public boolean hasInFlightFetches() {
-        return numInFlightFetches.get() > 0;
-    }
-
     private boolean matchesRequestedPartitions(FetchRequest request, FetchResponse response) {
         Set<TopicPartition> requestedPartitions = request.fetchData().keySet();
         Set<TopicPartition> fetchedPartitions = response.responseData().keySet();
@@ -161,13 +151,10 @@ public class Fetcher<K, V> {
             final FetchRequest request = fetchEntry.getValue();
             final Node fetchTarget = fetchEntry.getKey();
 
-            numInFlightFetches.incrementAndGet();
             client.send(fetchTarget, ApiKeys.FETCH, request)
                     .addListener(new RequestFutureListener<ClientResponse>() {
                         @Override
                         public void onSuccess(ClientResponse resp) {
-                            numInFlightFetches.decrementAndGet();
-
                             FetchResponse response = new FetchResponse(resp.responseBody());
                             if (!matchesRequestedPartitions(request, response)) {
                                 // obviously we expect the broker to always send us valid responses, so this check
@@ -194,7 +181,6 @@ public class Fetcher<K, V> {
 
                         @Override
                         public void onFailure(RuntimeException e) {
-                            numInFlightFetches.decrementAndGet();
                             log.debug("Fetch request to {} failed", fetchTarget, e);
                         }
                     });
@@ -362,6 +348,9 @@ public class Fetcher<K, V> {
 
     public Map<TopicPartition, OffsetAndTimestamp> getOffsetsByTimes(Map<TopicPartition, Long> timestampsToSearch,
                                                                      long timeout) {
+        if (timestampsToSearch.isEmpty())
+            return Collections.emptyMap();
+
         long startMs = time.milliseconds();
         long remaining = timeout;
         do {
@@ -592,10 +581,13 @@ public class Fetcher<K, V> {
                 log.debug("Cannot search by timestamp for partition {} because the message format version " +
                         "is before 0.10.0", topicPartition);
                 timestampOffsetMap.put(topicPartition, null);
-            } else if (error == Errors.NOT_LEADER_FOR_PARTITION
-                    || error == Errors.UNKNOWN_TOPIC_OR_PARTITION) {
+            } else if (error == Errors.NOT_LEADER_FOR_PARTITION) {
                 log.debug("Attempt to fetch offsets for partition {} failed due to obsolete leadership information, retrying.",
                         topicPartition);
+                future.raise(error);
+            } else if (error == Errors.UNKNOWN_TOPIC_OR_PARTITION) {
+                log.warn("Received unknown topic or partition error in ListOffset request for partition {}. The topic/partition " +
+                        "may not exist or the user may not have Describe access to it", topicPartition);
                 future.raise(error);
             } else {
                 log.warn("Attempt to fetch offsets for partition {} failed due to: {}",
@@ -664,13 +656,14 @@ public class Fetcher<K, V> {
         int bytes = 0;
         int recordsCount = 0;
         PartitionRecords<K, V> parsedRecords = null;
+        Errors error = Errors.forCode(partition.errorCode);
 
         try {
             if (!subscriptions.isFetchable(tp)) {
                 // this can happen when a rebalance happened or a partition consumption paused
                 // while fetch is still in-flight
                 log.debug("Ignoring fetched records for partition {} since it is no longer fetchable", tp);
-            } else if (partition.errorCode == Errors.NONE.code()) {
+            } else if (error == Errors.NONE) {
                 // we are interested in this fetch only if the beginning offset matches the
                 // current consumed position
                 Long position = subscriptions.position(tp);
@@ -700,10 +693,14 @@ public class Fetcher<K, V> {
                     ConsumerRecord<K, V> record = parsed.get(parsed.size() - 1);
                     this.sensors.recordsFetchLag.record(partition.highWatermark - record.offset());
                 }
-            } else if (partition.errorCode == Errors.NOT_LEADER_FOR_PARTITION.code()
-                    || partition.errorCode == Errors.UNKNOWN_TOPIC_OR_PARTITION.code()) {
+            } else if (error == Errors.NOT_LEADER_FOR_PARTITION) {
+                log.debug("Error in fetch for partition {}: {}", tp, error.exceptionName());
                 this.metadata.requestUpdate();
-            } else if (partition.errorCode == Errors.OFFSET_OUT_OF_RANGE.code()) {
+            } else if (error == Errors.UNKNOWN_TOPIC_OR_PARTITION) {
+                log.warn("Received unknown topic or partition error in fetch for partition {}. The topic/partition " +
+                        "may not exist or the user may not have Describe access to it", tp);
+                this.metadata.requestUpdate();
+            } else if (error == Errors.OFFSET_OUT_OF_RANGE) {
                 if (fetchOffset != subscriptions.position(tp)) {
                     log.debug("Discarding stale fetch response for partition {} since the fetched offset {}" +
                             "does not match the current offset {}", tp, fetchOffset, subscriptions.position(tp));
@@ -713,13 +710,13 @@ public class Fetcher<K, V> {
                 } else {
                     throw new OffsetOutOfRangeException(Collections.singletonMap(tp, fetchOffset));
                 }
-            } else if (partition.errorCode == Errors.TOPIC_AUTHORIZATION_FAILED.code()) {
+            } else if (error == Errors.TOPIC_AUTHORIZATION_FAILED) {
                 log.warn("Not authorized to read from topic {}.", tp.topic());
                 throw new TopicAuthorizationException(Collections.singleton(tp.topic()));
-            } else if (partition.errorCode == Errors.UNKNOWN.code()) {
+            } else if (error == Errors.UNKNOWN) {
                 log.warn("Unknown error fetching data for topic-partition {}", tp);
             } else {
-                throw new IllegalStateException("Unexpected error code " + partition.errorCode + " while fetching data");
+                throw new IllegalStateException("Unexpected error code " + error.code() + " while fetching data");
             }
         } finally {
             completedFetch.metricAggregator.record(tp, bytes, recordsCount);
@@ -727,7 +724,7 @@ public class Fetcher<K, V> {
 
         // we move the partition to the end if we received some bytes or if there was an error. This way, it's more
         // likely that partitions for the same topic can remain together (allowing for more efficient serialization).
-        if (bytes > 0 || partition.errorCode != Errors.NONE.code())
+        if (bytes > 0 || error != Errors.NONE)
             subscriptions.movePartitionToEnd(tp);
 
         return parsedRecords;

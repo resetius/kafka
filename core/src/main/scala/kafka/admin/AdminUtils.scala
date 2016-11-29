@@ -325,7 +325,7 @@ object AdminUtils extends Logging with AdminUtilities {
           case e2: Throwable => throw new AdminOperationException(e2)
         }
       } else {
-        throw new UnknownTopicOrPartitionException("topic %s to delete does not exist".format(topic))
+        throw new UnknownTopicOrPartitionException(s"Topic `$topic` to delete does not exist")
       }
     }
 
@@ -608,7 +608,7 @@ object AdminUtils extends Logging with AdminUtilities {
   def fetchAllChildEntityConfigs(zkUtils: ZkUtils, rootEntityType: String, childEntityType: String): Map[String, Properties] = {
     def entityPaths(zkUtils: ZkUtils, rootPath: Option[String]): Seq[String] = {
       val root = rootPath match {
-        case Some(path) => rootEntityType + '/' + rootPath
+        case Some(path) => rootEntityType + '/' + path
         case None => rootEntityType
       }
       val entityNames = zkUtils.getAllEntitiesWithConfig(root)

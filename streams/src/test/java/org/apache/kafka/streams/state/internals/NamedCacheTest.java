@@ -186,4 +186,15 @@ public class NamedCacheTest {
         assertEquals(Bytes.wrap(new byte[]{2}), iterator.next());
         assertFalse(iterator.hasNext());
     }
+
+    @Test
+    public void shouldNotThrowNullPointerWhenCacheIsEmptyAndEvictionCalled() throws Exception {
+        cache.evict();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void shouldThrowIllegalStateExceptionWhenTryingToOverwriteDirtyEntryWithCleanEntry() throws Exception {
+        cache.put(Bytes.wrap(new byte[]{0}), new LRUCacheEntry(new byte[]{10}, true, 0, 0, 0, ""));
+        cache.put(Bytes.wrap(new byte[]{0}), new LRUCacheEntry(new byte[]{10}, false, 0, 0, 0, ""));
+    }
 }
