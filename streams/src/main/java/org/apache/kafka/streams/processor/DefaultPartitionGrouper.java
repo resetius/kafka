@@ -58,7 +58,8 @@ public class DefaultPartitionGrouper implements PartitionGrouper {
                 Set<TopicPartition> group = new HashSet<>(topicGroup.size());
 
                 for (String topic : topicGroup) {
-                    if (partitionId < metadata.partitionsForTopic(topic).size()) {
+                    List<PartitionInfo> partitions = metadata.partitionsForTopic(topic);
+                    if (partitions != null && partitionId < partitions.size()) {
                         group.add(new TopicPartition(topic, partitionId));
                     }
                 }
@@ -75,14 +76,13 @@ public class DefaultPartitionGrouper implements PartitionGrouper {
     protected int maxNumPartitions(Cluster metadata, Set<String> topics) {
         int maxNumPartitions = 0;
         for (String topic : topics) {
-            List<PartitionInfo> infos = metadata.partitionsForTopic(topic);
+            List<PartitionInfo> partitions = metadata.partitionsForTopic(topic);
 
-            if (infos == null)
-                throw new StreamsException("Topic not found during partition assignment: " + topic);
-
-            int numPartitions = infos.size();
-            if (numPartitions > maxNumPartitions)
-                maxNumPartitions = numPartitions;
+            if (partitions != null) {
+                int numPartitions = partitions.size();
+                if (numPartitions > maxNumPartitions)
+                    maxNumPartitions = numPartitions;
+            }
         }
         return maxNumPartitions;
     }

@@ -314,13 +314,14 @@ class ReplicaFetcherThread(name: String,
   protected def buildFetchRequest(partitionMap: Seq[(TopicPartition, PartitionFetchState)]): FetchRequest = {
     val requestMap = new util.LinkedHashMap[TopicPartition, JFetchRequest.PartitionData]
 
-    val quotaExceeded = quota.isQuotaExceeded
     partitionMap.foreach { case (topicPartition, partitionFetchState) =>
       val topicAndPartition = new TopicAndPartition(topicPartition.topic, topicPartition.partition)
-      if (partitionFetchState.isActive && !(quota.isThrottled(topicAndPartition) && quotaExceeded)) {
+      // We will not include a replica in the fetch request if it should be throttled.
+      if (partitionFetchState.isActive && !shouldFollowerThrottle(quota, topicAndPartition)) {
         val currFetchSize: Int =
           if (fetchRequestVersion >= 3) fetchSize else fetchSizes.getOrElseUpdate(topicAndPartition, minFetchSize)
         requestMap.put(topicPartition, new JFetchRequest.PartitionData(partitionFetchState.offset, currFetchSize))
+
       }
     }
 
@@ -331,6 +332,14 @@ class ReplicaFetcherThread(name: String,
     new FetchRequest(request)
   }
 
+  /**
+   *  To avoid ISR thrashing, we only throttle a replica on the follower if it's in the throttled replica list,
+   *  the quota is exceeded and the replica is not in sync.
+   */
+  private def shouldFollowerThrottle(quota: ReplicaQuota, topicPartition: TopicAndPartition): Boolean = {
+    val isReplicaInSync = fetcherLagStats.isReplicaInSync(topicPartition.topic, topicPartition.partition)
+    quota.isThrottled(topicPartition) && quota.isQuotaExceeded && !isReplicaInSync
+  }
 }
 
 object ReplicaFetcherThread {
