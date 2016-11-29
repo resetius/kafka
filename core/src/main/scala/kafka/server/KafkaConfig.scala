@@ -127,6 +127,9 @@ object Defaults {
   val InterBrokerSecurityProtocol = SecurityProtocol.PLAINTEXT.toString
   val InterBrokerProtocolVersion = ApiVersion.latestVersion.toString
 
+  /** ********* Shutdown configuration ***********/
+  val UncleanShutdownEnable = false
+
   /** ********* Controlled shutdown configuration ***********/
   val ControlledShutdownMaxRetries = 3
   val ControlledShutdownRetryBackoffMs = 5000
@@ -295,6 +298,8 @@ object KafkaConfig {
   val UncleanLeaderElectionEnableProp = "unclean.leader.election.enable"
   val InterBrokerSecurityProtocolProp = "security.inter.broker.protocol"
   val InterBrokerProtocolVersionProp = "inter.broker.protocol.version"
+  /** ********* Shutdown configuration ***********/
+  val UncleanShutdownEnableProp = "unclean.shutdown.enable"
   /** ********* Controlled shutdown configuration ***********/
   val ControlledShutdownMaxRetriesProp = "controlled.shutdown.max.retries"
   val ControlledShutdownRetryBackoffMsProp = "controlled.shutdown.retry.backoff.ms"
@@ -508,6 +513,8 @@ object KafkaConfig {
   val InterBrokerProtocolVersionDoc = "Specify which version of the inter-broker protocol will be used.\n" +
   " This is typically bumped after all brokers were upgraded to a new version.\n" +
   " Example of some valid values are: 0.8.0, 0.8.1, 0.8.1.1, 0.8.2, 0.8.2.0, 0.8.2.1, 0.9.0.0, 0.9.0.1 Check ApiVersion for the full list."
+  /** ********* Shutdown configuration ***********/
+  val UncleanShutdownEnableDoc = "Disable log flushing on shutdown. This will greatly speed up shutdown, but slow down cold startup (for example, after reboot)."
   /** ********* Controlled shutdown configuration ***********/
   val ControlledShutdownMaxRetriesDoc = "Controlled shutdown can fail for multiple reasons. This determines the number of retries when such failure happens"
   val ControlledShutdownRetryBackoffMsDoc = "Before each retry, the system needs time to recover from the state that caused the previous failure (Controller fail over, replica lag etc). This config determines the amount of time to wait before retrying."
@@ -700,6 +707,9 @@ object KafkaConfig {
       .define(UncleanLeaderElectionEnableProp, BOOLEAN, Defaults.UncleanLeaderElectionEnable, HIGH, UncleanLeaderElectionEnableDoc)
       .define(InterBrokerSecurityProtocolProp, STRING, Defaults.InterBrokerSecurityProtocol, MEDIUM, InterBrokerSecurityProtocolDoc)
       .define(InterBrokerProtocolVersionProp, STRING, Defaults.InterBrokerProtocolVersion, MEDIUM, InterBrokerProtocolVersionDoc)
+
+      /** ********* Shutdown configuration ***********/
+      .define(UncleanShutdownEnableProp, BOOLEAN, Defaults.UncleanShutdownEnable, MEDIUM, UncleanShutdownEnableDoc)
 
       /** ********* Controlled shutdown configuration ***********/
       .define(ControlledShutdownMaxRetriesProp, INT, Defaults.ControlledShutdownMaxRetries, MEDIUM, ControlledShutdownMaxRetriesDoc)
@@ -914,6 +924,9 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
   // is passed, `0.10.0-IV0` may be picked)
   val interBrokerProtocolVersionString = getString(KafkaConfig.InterBrokerProtocolVersionProp)
   val interBrokerProtocolVersion = ApiVersion(interBrokerProtocolVersionString)
+
+  /** ********* Shutdown configuration ***********/
+  val uncleanShutdownEnable = getBoolean(KafkaConfig.UncleanShutdownEnableProp)
 
   /** ********* Controlled shutdown configuration ***********/
   val controlledShutdownMaxRetries = getInt(KafkaConfig.ControlledShutdownMaxRetriesProp)
