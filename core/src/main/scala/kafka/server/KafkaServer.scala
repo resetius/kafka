@@ -177,6 +177,8 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
    * Instantiates the LogManager, the SocketServer and the request handlers - KafkaRequestHandlers
    */
   def startup() {
+    // TODO: XXX
+    import scala.concurrent.ExecutionContext.Implicits.global
     try {
       info("starting")
 
