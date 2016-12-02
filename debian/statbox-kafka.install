@@ -1,4 +1,4 @@
-kafka_2.11-0.10.1.0/* /usr/lib/kafka
+kafka_2.11-0.10.1.1/* /usr/lib/kafka
 debian/etc/* etc
 debian/kafka-service-start.sh /usr/lib/kafka/bin
 debian/statbox-kafka.statbox-kafka.service /usr/lib/kafka/config

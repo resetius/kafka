@@ -1,6 +1,6 @@
 #! /usr/bin/make -f
 
-KAFKA_VERSION=0.10.1.0
+KAFKA_VERSION=0.10.1.1
 GRADLE_PARAMS := -PscalaVersion=2.11.7
 GRADLE_PARAMS += -Pversion=$(KAFKA_VERSION)
 GRADLE_PARAMS += -PmavenUrl=http://artifactory.yandex.net/artifactory/yandex_statbox_releases/
