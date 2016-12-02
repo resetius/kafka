@@ -28,6 +28,37 @@ then
   . /etc/default/statbox-kafka
 fi
 
+CHECKPOINTS="cleaner-offset-checkpoint recovery-point-offset-checkpoint replication-offset-checkpoint"
+
+for dir in `cat $KAFKA_CONF | grep log.dir | cut -d = -f 2 | tr "," " "` 
+do 
+    echo "check checkpoints in $dir"
+    for checkpoint in $CHECKPOINTS
+    do
+        echo "check $dir/$checkpoint"
+        if [ -f $dir/$checkpoint ]
+        then
+            rm -f $dir/$checkpoint.*
+            true 
+        else
+            latest=`ls -1 $dir/$checkpoint.* 2>/dev/null | tail -1`
+            if [ -n $latest ]
+            then
+                if [ "r$lastest" != "r" ]
+                then
+                    echo "cp $latest $dir/$checkpoint"
+                    cp $latest $dir/$checkpoint
+                    chown statbox:statbox $dir/$checkpoint
+                    if [ $? = 0 ]
+                    then
+                        rm -f $dir/$checkpoint.*
+                    fi
+                fi
+            fi
+        fi
+    done
+done
+
 DAEMON_OPTS="$KAFKA_OPTS -cp $CLASSPATH kafka.Kafka $KAFKA_CONF"
 
 ulimit -c unlimited
