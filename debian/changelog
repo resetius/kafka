@@ -1,3 +1,9 @@
+statbox-kafka (0.10.1.1-1) trusty; urgency=medium
+
+  * upstream c4766089f75c0e3627dbd3d596256622d0c1beb7 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Mon, 05 Dec 2016 13:36:14 +0300
+
 statbox-kafka (0.10.1.1-0) trusty; urgency=medium
 
   * merge with upstream
