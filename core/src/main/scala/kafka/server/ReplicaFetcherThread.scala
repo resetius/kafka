@@ -68,12 +68,6 @@ class ReplicaFetcherThread(name: String,
   private val maxBytes = brokerConfig.replicaFetchResponseMaxBytes
   private val fetchSize = brokerConfig.replicaFetchMaxBytes
 
-  // [LOGBROKER-1343] adaptive fetchSize - code may be removed after switching to KAFKA_0_10_1_IV1
-  import scala.collection.mutable
-  private val fetchSizes = mutable.HashMap.empty[TopicAndPartition, Int]
-  private val maxFetchSize = brokerConfig.replicaFetchMaxBytes
-  private val minFetchSize = brokerConfig.replicaFetchAvgBytes
-
   private def clientId = name
 
   private val sourceNode = new Node(sourceBroker.id, sourceBroker.host, sourceBroker.port)
@@ -126,11 +120,7 @@ class ReplicaFetcherThread(name: String,
       val replica = replicaMgr.getReplica(topic, partitionId).get
       val messageSet = partitionData.toByteBufferMessageSet
 
-      if (fetchRequestVersion >= 3) {
-        maybeWarnIfMessageOversized(messageSet, topicPartition)
-      } else {
-        updateFetchSizeIfMessageOversized(messageSet, TopicAndPartition(topicPartition.topic, topicPartition.partition))
-      }
+      maybeWarnIfMessageOversized(messageSet, topicPartition)
 
       if (fetchOffset != replica.logEndOffset.messageOffset)
         throw new RuntimeException("Offset mismatch for partition %s: fetched offset = %d, log end offset = %d.".format(topicPartition, fetchOffset, replica.logEndOffset.messageOffset))
@@ -165,24 +155,6 @@ class ReplicaFetcherThread(name: String,
         "This generally occurs when the max.message.bytes has been overridden to exceed this value and a suitably large " +
         "message has also been sent. To fix this problem increase replica.fetch.max.bytes in your broker config to be " +
         "equal or larger than your settings for max.message.bytes, both at a broker and topic level.")
-  }
-
-  def updateFetchSizeIfMessageOversized(messageSet: ByteBufferMessageSet, topicAndPartition: TopicAndPartition): Unit = {
-    val currFetchSize = fetchSizes.getOrElseUpdate(topicAndPartition, minFetchSize)
-    if (messageSet.sizeInBytes > 0 && messageSet.validBytes <= 0) {
-      if (currFetchSize >= maxFetchSize) {
-        error("Replication is failing due to a message that is greater than replica.fetch.max.bytes. This " +
-          "generally occurs when the max.message.bytes has been overridden to exceed this value and a suitably large " +
-          "message has also been sent. To fix this problem increase replica.fetch.max.bytes in your broker config to be " +
-          "equal or larger than your settings for max.message.bytes, both at a broker and topic level.")
-      } else {
-        val newFetchSize = math.min(currFetchSize * 2, maxFetchSize)
-        fetchSizes.put(topicAndPartition, newFetchSize)
-      }
-    } else if (currFetchSize > minFetchSize && messageSet.validBytes < currFetchSize) {
-      val newFetchSize = math.max(minFetchSize, currFetchSize / 2)
-      fetchSizes.put(topicAndPartition, newFetchSize)
-    }
   }
 
   /**
@@ -317,12 +289,8 @@ class ReplicaFetcherThread(name: String,
     partitionMap.foreach { case (topicPartition, partitionFetchState) =>
       val topicAndPartition = new TopicAndPartition(topicPartition.topic, topicPartition.partition)
       // We will not include a replica in the fetch request if it should be throttled.
-      if (partitionFetchState.isActive && !shouldFollowerThrottle(quota, topicAndPartition)) {
-        val currFetchSize: Int =
-          if (fetchRequestVersion >= 3) fetchSize else fetchSizes.getOrElseUpdate(topicAndPartition, minFetchSize)
-        requestMap.put(topicPartition, new JFetchRequest.PartitionData(partitionFetchState.offset, currFetchSize))
-
-      }
+      if (partitionFetchState.isActive && !shouldFollowerThrottle(quota, topicAndPartition)) 
+        requestMap.put(topicPartition, new JFetchRequest.PartitionData(partitionFetchState.offset, fetchSize))
     }
 
     val request =
