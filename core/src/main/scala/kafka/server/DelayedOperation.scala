@@ -21,10 +21,16 @@ import kafka.utils._
 import kafka.utils.timer._
 import kafka.utils.CoreUtils.{inReadLock, inWriteLock}
 import kafka.metrics.KafkaMetricsGroup
+
+import java.util.LinkedList
+import java.util.concurrent._
 import java.util.concurrent.atomic._
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
+import org.apache.kafka.common.utils.Utils
+
 import scala.collection._
+
 import com.yammer.metrics.core.Gauge
 
 
@@ -71,7 +77,7 @@ abstract class DelayedOperation(override val delayMs: Long) extends TimerTask wi
   /**
    * Check if the delayed operation is already completed
    */
-  def isCompleted: Boolean = completed.get()
+  def isCompleted(): Boolean = completed.get()
 
   /**
    * Call-back to execute when a delayed operation gets expired and hence forced to complete.
@@ -188,7 +194,7 @@ class DelayedOperationPurgatory[T <: DelayedOperation](purgatoryName: String,
     var watchCreated = false
     for(key <- watchKeys) {
       // If the operation is already completed, stop adding it to the rest of the watcher list.
-      if (operation.isCompleted)
+      if (operation.isCompleted())
         return false
       watchForOperation(key, operation)
 
@@ -203,9 +209,9 @@ class DelayedOperationPurgatory[T <: DelayedOperation](purgatoryName: String,
       return true
 
     // if it cannot be completed by now and hence is watched, add to the expire queue also
-    if (!operation.isCompleted) {
+    if (! operation.isCompleted()) {
       timeoutTimer.add(operation)
-      if (operation.isCompleted) {
+      if (operation.isCompleted()) {
         // cancel the timer task
         operation.cancel()
       }
@@ -282,53 +288,58 @@ class DelayedOperationPurgatory[T <: DelayedOperation](purgatoryName: String,
   }
 
   /**
-   * A vector of watched delayed operations for a specific key
+   * A linked list of watched delayed operations based on some key
    */
   private class Watchers(val key: Any) {
 
-    private[this] var operations = Vector[T]()
+    private[this] val operations = new LinkedList[T]()
 
-    def watched: Int = synchronized {
-      operations.size
-    }
+    def watched: Int = operations synchronized operations.size
 
     // add the element to watch
     def watch(t: T) {
-      synchronized {
-        operations = operations :+ t
-      }
+      operations synchronized operations.add(t)
     }
 
     // traverse the list and try to complete some watched elements
     def tryCompleteWatched(): Int = {
-      val ops = synchronized(operations)
-      var completedAlready = 0
-      var completedNow = 0
 
-      // call tryComplete without holding the lock to avoid potential deadlocks
-      for (op <- ops) {
-        if (op.isCompleted)
-          completedAlready += 1
-        else if (op synchronized op.tryComplete())
-          completedNow += 1
+      var completed = 0
+      operations synchronized {
+        val iter = operations.iterator()
+        while (iter.hasNext) {
+          val curr = iter.next()
+          if (curr.isCompleted) {
+            // another thread has completed this operation, just remove it
+            iter.remove()
+          } else if (curr synchronized curr.tryComplete()) {
+            completed += 1
+            iter.remove()
+          }
+        }
       }
 
-      // purge if there are any completed operations
-      if (completedAlready + completedNow > 0)
-        purgeCompleted()
+      if (operations.size == 0)
+        removeKeyIfEmpty(key, this)
 
-      completedNow
+      completed
     }
 
     // traverse the list and purge elements that are already completed by others
     def purgeCompleted(): Int = {
-      val (purged, shouldRemove) = synchronized {
-        val initialSize = operations.size
-        operations = operations.filterNot(_.isCompleted)
-        (initialSize - operations.size, operations.isEmpty)
+      var purged = 0
+      operations synchronized {
+        val iter = operations.iterator()
+        while (iter.hasNext) {
+          val curr = iter.next()
+          if (curr.isCompleted) {
+            iter.remove()
+            purged += 1
+          }
+        }
       }
 
-      if (shouldRemove)
+      if (operations.size == 0)
         removeKeyIfEmpty(key, this)
 
       purged
