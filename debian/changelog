@@ -1,3 +1,10 @@
+statbox-kafka (0.10.1.1-3) trusty; urgency=medium
+
+  * upstream c1385887fc02e3bd393c18f36e97101faad9b97d 
+  * [LOGBROKER-2099] force delete registration node on shutdown
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Wed, 07 Dec 2016 17:51:24 +0300
+
 statbox-kafka (0.10.1.1-2) trusty; urgency=medium
 
   * KAFKA-3038; speedup controller 
