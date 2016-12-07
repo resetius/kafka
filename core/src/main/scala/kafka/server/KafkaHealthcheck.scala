@@ -51,6 +51,10 @@ class KafkaHealthcheck(brokerId: Int,
     register()
   }
 
+  def shutdown(): Unit = {
+    unregister()
+  }
+
   /**
    * Register this broker as "alive" in zookeeper
    */
@@ -69,6 +73,12 @@ class KafkaHealthcheck(brokerId: Int,
     val plaintextEndpoint = updatedEndpoints.getOrElse(SecurityProtocol.PLAINTEXT, new EndPoint(null,-1,null))
     zkUtils.registerBrokerInZk(brokerId, plaintextEndpoint.host, plaintextEndpoint.port, updatedEndpoints, jmxPort, rack,
       interBrokerProtocolVersion)
+  }
+
+  def unregister(): Unit = {
+    info("deleting broker info from ZK for broker " + brokerId)
+    zkUtils.deletePath(ZkUtils.BrokerIdsPath + "/" + brokerId)
+    info("done deleting broker info")
   }
 
   /**
