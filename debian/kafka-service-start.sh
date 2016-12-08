@@ -66,5 +66,6 @@ ulimit -n 655350
 
 test -d /var/run/$DAEMON_BASE || mkdir -p /var/run/$DAEMON_BASE
 chown statbox:statbox /var/run/statbox -R
+sleep 30
 echo "${DAEMON_BIN} -- ${DAEMON_OPTS}"
 LD_PRELOAD=$LD_PRELOAD exec start-stop-daemon -c statbox:statbox --start -mp /var/run/$DAEMON_BASE/$DAEMON.pid --exec ${DAEMON_BIN} -- ${DAEMON_OPTS}
