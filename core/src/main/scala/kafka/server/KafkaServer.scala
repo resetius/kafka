@@ -625,8 +625,6 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
           CoreUtils.swallow(groupCoordinator.shutdown())
         if(kafkaController != null)
           CoreUtils.swallow(kafkaController.shutdown())
-        if (kafkaHealthcheck != null)
-          CoreUtils.swallow(kafkaHealthcheck.shutdown())
         if(zkUtils != null)
           CoreUtils.swallow(zkUtils.close())
         if (metrics != null)
