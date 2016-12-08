@@ -42,12 +42,18 @@ object Json extends Logging {
     defaultNumberParser = {input : String => input.toInt}
   }
 
+  private val parser = new ThreadLocal[JSON] {
+    override def initialValue(): JSON = {
+      new JSON
+    }
+  }
+
   /**
    * Parse a JSON string into an object
    */
   def parseFull(input: String): Option[Any] = {
     try {
-      (new JSON).parse(input)
+      parser.get().parse(input)
     } catch {
       case t: Throwable =>
         throw new KafkaException("Can't parse json string: %s".format(input), t)
