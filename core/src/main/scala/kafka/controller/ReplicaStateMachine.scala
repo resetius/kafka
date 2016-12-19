@@ -113,12 +113,13 @@ class ReplicaStateMachine(controller: KafkaController)(implicit ec: ExecutionCon
     if(replicas.nonEmpty) {
       info("Invoking state change to %s for replicas %s".format(targetState, replicas.mkString(",")))
       try {
-        brokerRequestBatch.newBatch()
+        import scala.concurrent.duration._
         // replicas.foreach(r => handleStateChange(r, targetState, callbacks))
+
+        brokerRequestBatch.newBatch()
 
         val listOfFutures = replicas.map(r => handleStateChangeAsync(r, targetState, callbacks))
 
-        import scala.concurrent.duration._
         val futureOfList = Future.sequence(listOfFutures)
         val result = Await.result(futureOfList, 300.seconds)
         for (cb <- result) {

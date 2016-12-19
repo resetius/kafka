@@ -70,6 +70,8 @@ object ReplicationUtils extends Logging {
             case (Some(expectedLeader),Some(writtenLeader)) =>
               if(expectedLeader == writtenLeader)
                 return (true,writtenStat.getVersion())
+              else
+                info(s"$path: $expectedLeader != $writtenLeader")
             case _ =>
           }
         case None =>
