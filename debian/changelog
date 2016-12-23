@@ -1,3 +1,9 @@
+statbox-kafka (0.10.1.1-6) trusty; urgency=medium
+
+  * [LOGBROKER-2145] add throughput for disk balancer 
+
+ -- Alexey Ozeritsky <aozeritsky@yandex-team.ru>  Fri, 23 Dec 2016 18:50:25 +0300
+
 statbox-kafka (0.10.1.1-5) trusty; urgency=medium
 
   * upstream 7226d6ed9d4e61395c624ee875a2b12972ede664 
