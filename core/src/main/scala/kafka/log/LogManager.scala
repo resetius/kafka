@@ -516,7 +516,7 @@ class LogManager(val logDirs: Array[File],
       if (mx - p.size > dif) {
         val log = groupByDir.head.pop
 
-        log.move(p.file)
+        log.move(p.file, balancerConfig.throughput)
         checkpointRecoveryPointOffsets()
 
         p.add(log)
