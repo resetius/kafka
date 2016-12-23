@@ -655,7 +655,7 @@ class Log(var dir: File,
     }
   }
 
-  def move(basedir: File): Unit = {
+  def move(basedir: File, throughput: Long): Unit = {
     val newdir = new File(basedir + "/" + dir.getName)
 
     val old = new File(dir.getAbsolutePath)
@@ -698,7 +698,26 @@ class Log(var dir: File,
           val newSegment = segment.synchronized { if (segment.log.channel.isOpen) {
             val dataFile = new File(newdir + "/" + segmentFile)
             val data = FileMessageSet.openChannel(dataFile, mutable = true)
-            segment.log.writeTo(data, 0, segment.log.sizeInBytes())
+            if (throughput < 0) {
+              segment.log.writeTo(data, 0, segment.log.sizeInBytes())
+            } else {
+              val blockSize = 128*1024
+              val totalSize = segment.log.sizeInBytes()
+              var pos = 0
+              val t = System.currentTimeMillis()
+              while (pos < totalSize) {
+                val written = segment.log.writeTo(data, pos, blockSize)
+                pos += written
+
+                while (pos.toDouble / ((System.currentTimeMillis() - t) / 1000).toDouble > throughput) {
+                  Thread.sleep(500)
+                }
+              }
+
+              val t2 = System.currentTimeMillis()
+              info("moved %s in %d seconds, speed %f".format(
+                segment.log.file.getAbsolutePath, t2 - t, pos.toDouble / ((t2 - t) / 1000).toDouble))
+            }
 
             val index = FileMessageSet.openChannel(new File(newdir + "/" + indexFile), mutable = true)
             val indexSrc = FileMessageSet.openChannel(segment.index.file, mutable = false)

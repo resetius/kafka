@@ -591,6 +591,8 @@ object KafkaConfig {
   val DiskBalancerGroupMatchDoc = ""
   val DiskBalancerGroupFieldsProp = "disk.balancer.group.fields"
   val DiskBalancerGroupFieldsDoc = ""
+  val DiskBalancerThroughputProp = "disk.balancer.throughput"
+  val DiskBalancerThroughputDoc = ""
 
   private val configDef = {
     import ConfigDef.Importance._
@@ -773,6 +775,7 @@ object KafkaConfig {
       .define(SaslKerberosPrincipalToLocalRulesProp, LIST, Defaults.SaslKerberosPrincipalToLocalRules, MEDIUM, SaslKerberosPrincipalToLocalRulesDoc)
       /** *** Disk Balancer ***/
       .define(DiskBalancerEnableProp, BOOLEAN, false, LOW, DiskBalancerEnableDoc)
+      .define(DiskBalancerThroughputProp, LONG, -1, LOW, DiskBalancerThroughputDoc)
       .define(DiskBalancerGroupMatchProp, STRING, "(.*)", LOW, DiskBalancerGroupMatchDoc)
       .define(DiskBalancerGroupFieldsProp, STRING, "1", LOW, DiskBalancerGroupFieldsDoc)
   }
@@ -1094,4 +1097,5 @@ class KafkaConfig(val props: java.util.Map[_, _], doLog: Boolean) extends Abstra
   val diskBalancerEnable = getBoolean(KafkaConfig.DiskBalancerEnableProp)
   val diskBalancerGroupMatch = getString(KafkaConfig.DiskBalancerGroupMatchProp).r
   val diskBalancerGroupFields = getString(KafkaConfig.DiskBalancerGroupFieldsProp).split(',').map(_.toInt)
+  val diskBalancerThroughput = getLong(KafkaConfig.DiskBalancerThroughputProp)
 }

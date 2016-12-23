@@ -675,7 +675,8 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
 
     val balancerConfig = BalancerConfig(enable = config.diskBalancerEnable,
                                         groupMatch = config.diskBalancerGroupMatch,
-                                        groupFields = config.diskBalancerGroupFields)
+                                        groupFields = config.diskBalancerGroupFields,
+                                        throughput = config.diskBalancerThroughput)
     new LogManager(logDirs = config.logDirs.map(new File(_)).toArray,
                    topicConfigs = configs,
                    defaultConfig = defaultLogConfig,
